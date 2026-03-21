@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card } from '../components/Card';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -28,9 +28,10 @@ export default function RelatoriosPage() {
   const now = new Date();
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth());
+  const printRef = useRef(null);
 
   useEffect(() => {
-    if (!isAdmin) { setLoading(false); return; }
+    if (!isAdmin || !profile?.id) { setLoading(false); return; }
     const fetchReports = async () => {
       setLoading(true);
       try {
@@ -178,7 +179,9 @@ export default function RelatoriosPage() {
     setTimeout(() => { win.print(); win.close(); }, 400);
   };
 
-  if (!isAdmin && !loading) {
+  if (!profile) return <div className="p-8 text-center text-zinc-500 font-bold animate-pulse">Carregando...</div>;
+
+  if (!isAdmin) {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-4 text-center animate-in fade-in">
         <ShieldAlert size={40} className="text-zinc-300 dark:text-zinc-600" />

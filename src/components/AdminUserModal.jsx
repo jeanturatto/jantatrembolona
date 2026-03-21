@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 
 const TABS = ['Dados', 'Justificativas'];
 
-export const AdminUserModal = ({ isOpen, onClose, targetUser, onSuccess }) => {
+export const AdminUserModal = ({ isOpen, onClose, targetUser, onSuccess, initialTab }) => {
   const [tab, setTab] = useState('Dados');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');

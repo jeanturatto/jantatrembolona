@@ -145,7 +145,7 @@ export default function DashboardPage() {
     <div className="space-y-8 animate-in fade-in">
       <header>
         <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white capitalize">
-          Olá, {profile?.name?.split(' ')[0] || 'Usuário'} 👋
+          Olá, {profile?.name || 'Usuário'} 👋
         </h1>
         <p className="text-zinc-500">Bem-vindo ao Janta Trembolona</p>
       </header>
