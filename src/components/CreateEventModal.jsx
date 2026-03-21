@@ -37,6 +37,18 @@ export const CreateEventModal = ({ isOpen, onClose, onSuccess }) => {
     }
   }, [isOpen]);
 
+  // Load script on mount
+  useEffect(() => {
+    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+    if (apiKey && !document.getElementById('google-maps-script')) {
+      const script = document.createElement('script');
+      script.id = 'google-maps-script';
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+      script.async = true;
+      document.head.appendChild(script);
+    }
+  }, []);
+
   // Autocomplete fetch for location
   useEffect(() => {
     if (!location || location.length < 3 || !showSuggestions) {
@@ -45,10 +57,22 @@ export const CreateEventModal = ({ isOpen, onClose, onSuccess }) => {
     }
     const delayDebounceFn = setTimeout(async () => {
       try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}&limit=5`);
-        if (res.ok) {
-          const data = await res.json();
-          setSuggestions(data);
+        const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+        if (apiKey && window.google?.maps?.places) {
+          const service = new window.google.maps.places.AutocompleteService();
+          service.getPlacePredictions({ input: location, componentRestrictions: { country: 'br' } }, (predictions, status) => {
+            if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
+              setSuggestions(predictions.map(p => ({ display_name: p.description })));
+            } else {
+              setSuggestions([]);
+            }
+          });
+        } else {
+          const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}&limit=5&countrycodes=br`);
+          if (res.ok) {
+            const data = await res.json();
+            setSuggestions(data);
+          }
         }
       } catch (err) {
         console.error("Autocomplete error:", err);
@@ -182,11 +206,9 @@ export const CreateEventModal = ({ isOpen, onClose, onSuccess }) => {
                   }`}
                 >
                   <div className="w-8 h-8 bg-zinc-200 dark:bg-zinc-700 rounded-full flex items-center justify-center font-bold text-zinc-500 overflow-hidden shrink-0 text-xs">
-                    {u.avatar_url ? (
-                      <img src={u.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
-                    ) : (
-                      uName.charAt(0).toUpperCase()
-                    )}
+                    {uAvatar ? (
+                      <img src={uAvatar} alt="" className="w-full h-full object-cover" />
+                    ) : (uName || 'U').charAt(0).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold truncate text-zinc-900 dark:text-white capitalize">{uName}</p>

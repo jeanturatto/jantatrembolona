@@ -62,8 +62,8 @@ export const AdminAttendanceModal = ({ isOpen, onClose, event, onSuccess }) => {
         ) : members.map(m => (
           <div key={m.id} className="p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl space-y-2">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center font-bold text-xs overflow-hidden shrink-0">
-                {m.avatar_url ? <img src={m.avatar_url} alt="" className="w-full h-full object-cover" /> : m.displayName?.charAt(0).toUpperCase()}
+              <div className="w-10 h-10 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center font-bold text-zinc-500 overflow-hidden shrink-0">
+                {m.avatar_url ? <img src={m.avatar_url} alt="" className="w-full h-full object-cover" /> : (m.displayName || m.email || 'U').charAt(0).toUpperCase()}
               </div>
               <div>
                 <p className="text-sm font-bold text-zinc-900 dark:text-white capitalize">{m.displayName}</p>

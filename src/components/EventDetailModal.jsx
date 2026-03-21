@@ -78,8 +78,8 @@ export const EventDetailModal = ({ isOpen, onClose, event }) => {
                   <div key={r.id} className="flex items-center gap-3 p-2 bg-zinc-50 dark:bg-zinc-800 rounded-lg">
                     <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center font-bold text-xs text-zinc-600 dark:text-zinc-300 overflow-hidden shrink-0">
                       {r.avatar_url ? (
-                        <img src={r.avatar_url} alt={nome} className="w-full h-full object-cover" />
-                      ) : nome.charAt(0).toUpperCase()}
+                        <img src={r.avatar_url} alt={nome || ''} className="w-full h-full object-cover" />
+                      ) : (nome || 'U').charAt(0).toUpperCase()}
                     </div>
                     <p className="text-sm font-bold text-zinc-900 dark:text-white capitalize">{nome}</p>
                   </div>

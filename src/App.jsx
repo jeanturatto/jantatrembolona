@@ -1,5 +1,5 @@
 import React from 'react';
-import { MemoryRouter as BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { MemoryRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 
 import Layout from './components/Layout';
@@ -23,7 +23,7 @@ const ProtectedRoute = ({ children, requireAdmin = false }) => {
 export default function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
+      <MemoryRouter>
         <Routes>
           {/* Rota pública */}
           <Route path="/login" element={<LoginPage />} />
@@ -43,7 +43,7 @@ export default function App() {
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </BrowserRouter>
+      </MemoryRouter>
     </AuthProvider>
   );
 }

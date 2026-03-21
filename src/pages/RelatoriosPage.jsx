@@ -280,7 +280,7 @@ export default function RelatoriosPage() {
                         <div className="w-9 h-9 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center font-bold text-xs text-zinc-600 overflow-hidden shrink-0">
                           {m.avatar_url
                             ? <img src={m.avatar_url} alt={m.name} className="w-full h-full object-cover" />
-                            : m.name?.charAt(0).toUpperCase()
+                            : (m.name || m.email || 'U').charAt(0).toUpperCase()
                           }
                         </div>
                         <div>

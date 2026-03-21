@@ -199,7 +199,7 @@ export default function AdminPage() {
                     {u.avatar_url ? (
                       <img src={u.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
                     ) : (
-                      u.name?.charAt(0).toUpperCase() || <User size={16}/>
+                      (u.name || u.email || 'U').charAt(0).toUpperCase()
                     )}
                   </div>
                   <div className="truncate">

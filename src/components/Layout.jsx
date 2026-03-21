@@ -167,7 +167,7 @@ export default function Layout() {
               }
             </div>
             <div className="flex-1 overflow-hidden">
-              <p className="text-xs font-bold truncate text-zinc-900 dark:text-white capitalize">{profile?.name || 'Usuário'}</p>
+              <p className="text-xs font-bold truncate text-zinc-900 dark:text-white capitalize">{profile?.name || user?.email?.split('@')[0] || 'Usuário'}</p>
               <p className="text-[10px] text-zinc-500 truncate">{user?.email}</p>
             </div>
             <button onClick={handleLogout} className="p-2 -mr-2 text-zinc-400 hover:text-red-500 transition-colors">
