@@ -50,12 +50,14 @@ export const AdminUserModal = ({ isOpen, onClose, targetUser, onSuccess, initial
     setSaving(true);
     try {
       // Update profiles table
-      await supabase.from('profiles').update({ name, telefone: phone, pix, role, inadimplente }).eq('id', targetUser.id);
+      const { error: updateError } = await supabase.from('profiles').update({ name, telefone: phone, pix, role, inadimplente }).eq('id', targetUser.id);
+      if (updateError) throw updateError;
 
       // If new password set, mark must_change_password and use send reset email
       if (newPassword && newPassword.length >= 6) {
         // Admin sets password via Supabase Auth admin API (requires service role - use reset email instead)
-        await supabase.from('profiles').update({ must_change_password: true }).eq('id', targetUser.id);
+        const { error: passError } = await supabase.from('profiles').update({ must_change_password: true }).eq('id', targetUser.id);
+        if (passError) throw passError;
         // Send password reset email as secure alternative
         await supabase.auth.resetPasswordForEmail(targetUser.email, {
           redirectTo: `${window.location.origin}/reset-password`

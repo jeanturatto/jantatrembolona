@@ -37,12 +37,14 @@ export const AdminAttendanceModal = ({ isOpen, onClose, event, onSuccess }) => {
     setSaving(userId);
     try {
       if (!status) {
-        await supabase.from('attendances').delete().match({ event_id: event.id, user_id: userId });
+        const { error } = await supabase.from('attendances').delete().match({ event_id: event.id, user_id: userId });
+        if (error) throw error;
       } else {
-        await supabase.from('attendances').upsert(
+        const { error } = await supabase.from('attendances').upsert(
           { event_id: event.id, user_id: userId, status },
           { onConflict: 'event_id,user_id' }
         );
+        if (error) throw error;
       }
       setMembers(prev => prev.map(m => m.id === userId ? { ...m, status } : m));
       onSuccess?.();

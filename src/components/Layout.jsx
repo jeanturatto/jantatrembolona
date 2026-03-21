@@ -21,6 +21,25 @@ export default function Layout() {
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [appConfig, setAppConfig] = useState({ name: 'Janta Trembolona', subtitle: 'Grupo de Jantas', iconUrl: '' });
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      const { data } = await supabase.from('app_settings').select('key, value');
+      if (data) {
+        const settings = { name: 'Janta Trembolona', subtitle: 'Grupo de Jantas', iconUrl: '' };
+        data.forEach(({ key, value }) => {
+          if (key === 'app_name') settings.name = value || 'Janta Trembolona';
+          if (key === 'app_subtitle') settings.subtitle = value || 'Grupo de Jantas';
+          if (key === 'app_icon_url') settings.iconUrl = value || '';
+        });
+        setAppConfig(settings);
+      }
+    };
+    fetchSettings();
+    window.addEventListener('app_settings_updated', fetchSettings);
+    return () => window.removeEventListener('app_settings_updated', fetchSettings);
+  }, []);
 
   const handleLogout = async () => {
     await signOut();
@@ -63,12 +82,18 @@ export default function Layout() {
       {/* MOBILE HEADER */}
       <header className="md:hidden fixed top-0 w-full h-16 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between px-4 z-40">
         <div className="flex items-center gap-2">
-           <div className="w-8 h-8 bg-zinc-900 dark:bg-white rounded-lg flex items-center justify-center">
-            <Utensils className="text-white dark:text-black" size={16} />
-          </div>
-          <h1 className="font-bold text-sm text-zinc-900 dark:text-white">Janta Trembolona</h1>
+          {appConfig.iconUrl ? (
+            <div className="w-8 h-8 rounded-lg overflow-hidden shrink-0">
+              <img src={appConfig.iconUrl} alt="App Icon" className="w-full h-full object-cover" />
+            </div>
+          ) : (
+            <div className="w-8 h-8 bg-zinc-900 dark:bg-white rounded-lg flex items-center justify-center shrink-0">
+              <Utensils className="text-white dark:text-black" size={16} />
+            </div>
+          )}
+          <h1 className="font-bold text-sm text-zinc-900 dark:text-white truncate">{appConfig.name}</h1>
         </div>
-        <button 
+        <button  
           className="p-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
           onClick={() => setIsMobileMenuOpen(true)}
         >
@@ -90,13 +115,19 @@ export default function Layout() {
         md:translate-x-0
       `}>
         <div className="p-6 flex items-center justify-between md:justify-start gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-zinc-900 dark:bg-white rounded-xl flex items-center justify-center shrink-0">
-              <Utensils className="text-white dark:text-black" size={20} />
-            </div>
-            <div>
-              <h2 className="font-bold text-sm leading-tight text-zinc-900 dark:text-white">Janta Trembolona</h2>
-              <p className="text-[10px] text-zinc-500 uppercase tracking-tighter">Grupo de Jantas</p>
+          <div className="flex items-center gap-3 overflow-hidden">
+            {appConfig.iconUrl ? (
+              <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 shadow-sm">
+                <img src={appConfig.iconUrl} alt="App Logo" className="w-full h-full object-cover" />
+              </div>
+            ) : (
+              <div className="w-10 h-10 bg-zinc-900 dark:bg-white rounded-xl flex items-center justify-center shrink-0">
+                <Utensils className="text-white dark:text-black" size={20} />
+              </div>
+            )}
+            <div className="overflow-hidden">
+              <h2 className="font-bold text-sm leading-tight text-zinc-900 dark:text-white truncate">{appConfig.name}</h2>
+              <p className="text-[10px] text-zinc-500 uppercase tracking-tighter truncate">{appConfig.subtitle}</p>
             </div>
           </div>
           

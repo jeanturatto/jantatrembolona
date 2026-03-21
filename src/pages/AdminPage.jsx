@@ -120,7 +120,8 @@ export default function AdminPage() {
         supabase.from('app_settings').upsert({ key: 'app_subtitle', value: appSubtitle }),
         supabase.from('app_settings').upsert({ key: 'app_icon_url', value: appIconUrl }),
       ]);
-      alert('Configurações salvas! Recarregue a página para ver as alterações no menu.');
+      window.dispatchEvent(new Event('app_settings_updated'));
+      alert('Configurações salvas com sucesso!');
     } catch (err) {
       alert('Erro ao salvar.');
     } finally {

@@ -9,6 +9,24 @@ import { EventDetailModal } from '../components/EventDetailModal';
 import { JustificativaModal } from '../components/JustificativaModal';
 import { AdminAttendanceModal } from '../components/AdminAttendanceModal';
 
+const isEventPastDeadline = (eventDateStr) => {
+  if (!eventDateStr) return false;
+  const now = new Date();
+  const brtOffset = -3 * 60;
+  const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
+  const brt = new Date(utcMs + brtOffset * 60000);
+  
+  const eventDate = new Date(eventDateStr);
+  const todayStart = new Date(brt.getFullYear(), brt.getMonth(), brt.getDate());
+  const eventStart = new Date(eventDate.getUTCFullYear(), eventDate.getUTCMonth(), eventDate.getUTCDate());
+  
+  if (todayStart > eventStart) return true;
+  if (todayStart.getTime() === eventStart.getTime()) {
+    return brt.getHours() >= 16;
+  }
+  return false;
+};
+
 export default function JantasPage() {
   const { user, isAdmin } = useAuth();
   const [jantas, setJantas] = useState([]);
@@ -100,6 +118,11 @@ export default function JantasPage() {
   }, [user.id, jantas]);
 
   const handleAttendance = async (eventId, statusParam, justificativa = null) => {
+    const janta = jantas.find(j => j.id === eventId);
+    if (janta && isEventPastDeadline(janta.rawDate)) {
+      alert('O prazo de confirmação encerrou às 16:00 (horário de Brasília).');
+      return;
+    }
     setActionLoading(eventId);
     try {
       const payload = { event_id: eventId, user_id: user.id, status: statusParam };
@@ -114,7 +137,14 @@ export default function JantasPage() {
     }
   };
 
-  const handleJustificado = (eventId) => { setJustEventId(eventId); setIsJustModalOpen(true); };
+  const handleJustificado = (eventId) => {
+    const janta = jantas.find(j => j.id === eventId);
+    if (janta && isEventPastDeadline(janta.rawDate)) {
+      alert('O prazo de confirmação encerrou às 16:00 (horário de Brasília).');
+      return;
+    }
+    setJustEventId(eventId); setIsJustModalOpen(true); 
+  };
 
   const handleJustificativaConfirm = async (texto) => {
     await handleAttendance(justEventId, 'Falta Justificada', texto);
@@ -123,6 +153,11 @@ export default function JantasPage() {
   };
 
   const handleNaoVou = (eventId) => {
+    const janta = jantas.find(j => j.id === eventId);
+    if (janta && isEventPastDeadline(janta.rawDate)) {
+      alert('O prazo de confirmação encerrou às 16:00 (horário de Brasília).');
+      return;
+    }
     if (ausenciasNoMes >= LIMITE_AUSENCIAS) {
       alert(`Você já marcou "Não Vou" ${LIMITE_AUSENCIAS}x neste mês. A partir de agora é obrigatório justificar.`);
       handleJustificado(eventId);
@@ -272,7 +307,11 @@ export default function JantasPage() {
             {/* Attendance buttons (only for Aberto and not Cancelado) */}
             {janta.status === 'Aberto' && (
               <div className="flex flex-wrap gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800">
-                {janta.userStatus === 'Presente' ? (
+                {janta.responsibles.includes(user.id) ? (
+                  <button disabled className="flex-1 sm:flex-none text-xs font-bold py-2 px-4 rounded-xl border border-green-500 text-green-600 bg-green-50 dark:bg-green-500/10 min-w-[140px] flex items-center gap-2 cursor-not-allowed">
+                    <Lock size={12} /> Responsável (Confirmado)
+                  </button>
+                ) : janta.userStatus === 'Presente' ? (
                   <button disabled className="flex-1 sm:flex-none text-xs font-bold py-2 px-4 rounded-xl border border-green-500 text-green-600 bg-green-50 dark:bg-green-500/10 min-w-[140px] flex items-center gap-2 cursor-not-allowed opacity-80">
                     <Lock size={12} /> Presença Confirmada
                   </button>
@@ -283,6 +322,10 @@ export default function JantasPage() {
                 ) : janta.userStatus === 'Ausente' ? (
                   <button disabled className="flex-1 sm:flex-none text-xs font-bold py-2 px-4 rounded-xl border border-zinc-400 text-zinc-500 bg-zinc-100 dark:bg-zinc-800 min-w-[140px] flex items-center gap-2 cursor-not-allowed opacity-80">
                     <Lock size={12} /> Não Vai
+                  </button>
+                ) : isEventPastDeadline(janta.rawDate) ? (
+                  <button disabled className="flex-1 sm:flex-none text-xs font-bold py-2 px-4 rounded-xl border border-red-300 text-red-400 bg-red-50 dark:bg-red-900/10 min-w-[140px] flex items-center gap-2 cursor-not-allowed opacity-80">
+                    Prazo Encerrado
                   </button>
                 ) : (
                   <>

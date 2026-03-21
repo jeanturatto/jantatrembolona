@@ -7,14 +7,23 @@ import { Link } from 'react-router-dom';
 import { JustificativaModal } from '../components/JustificativaModal';
 import { EventDetailModal } from '../components/EventDetailModal';
 
-// Check if current time (Brasilia UTC-3) is past 16:00
-const isPastDeadline = () => {
+// Check if current time (Brasilia UTC-3) is past 16:00 for the event's date
+const isEventPastDeadline = (eventDateStr) => {
+  if (!eventDateStr) return false;
   const now = new Date();
-  // Convert to BRT (UTC-3)
   const brtOffset = -3 * 60;
   const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
   const brt = new Date(utcMs + brtOffset * 60000);
-  return brt.getHours() >= 16;
+  
+  const eventDate = new Date(eventDateStr);
+  const todayStart = new Date(brt.getFullYear(), brt.getMonth(), brt.getDate());
+  const eventStart = new Date(eventDate.getUTCFullYear(), eventDate.getUTCMonth(), eventDate.getUTCDate());
+  
+  if (todayStart > eventStart) return true;
+  if (todayStart.getTime() === eventStart.getTime()) {
+    return brt.getHours() >= 16;
+  }
+  return false;
 };
 
 export default function DashboardPage() {
@@ -89,9 +98,10 @@ export default function DashboardPage() {
   // Auto-mark past-deadline on today's open janta
   useEffect(() => {
     const autoMarkDeadline = async () => {
-      if (!isPastDeadline()) return;
       const proximaAberta = jantas.find(j => j.status === 'Aberto' && !j.userStatus);
       if (!proximaAberta) return;
+      if (!isEventPastDeadline(proximaAberta.rawDate)) return;
+      
       const userName = profile?.name || user?.email?.split('@')[0] || 'Usuário';
       await supabase.from('attendances').upsert({
         event_id: proximaAberta.id,
@@ -105,8 +115,8 @@ export default function DashboardPage() {
   }, [jantas, profile]);
 
   const handleAttendance = async (eventId, statusParam, justificativa = null) => {
-    // Block after 16:00 BRT
-    if (isPastDeadline()) {
+    const janta = jantas.find(j => j.id === eventId);
+    if (janta && isEventPastDeadline(janta.rawDate)) {
       alert('O prazo de confirmação encerrou às 16:00 (horário de Brasília).');
       return;
     }
@@ -125,7 +135,8 @@ export default function DashboardPage() {
   };
 
   const handleJustificado = (eventId) => {
-    if (isPastDeadline()) { alert('O prazo de confirmação encerrou às 16:00 (horário de Brasília).'); return; }
+    const janta = jantas.find(j => j.id === eventId);
+    if (janta && isEventPastDeadline(janta.rawDate)) { alert('O prazo de confirmação encerrou às 16:00 (horário de Brasília).'); return; }
     setJustEventId(eventId);
     setIsJustModalOpen(true);
   };
@@ -137,7 +148,7 @@ export default function DashboardPage() {
   };
 
   const proximaJanta = jantas.find(j => j.status === 'Aberto');
-  const pastDeadline = isPastDeadline();
+  const pastDeadline = proximaJanta ? isEventPastDeadline(proximaJanta.rawDate) : false;
 
   if (loading) return <div className="p-8 text-center text-zinc-500 animate-pulse">Carregando painel...</div>;
 
@@ -193,10 +204,13 @@ export default function DashboardPage() {
                   )}
                 </div>
 
-                {/* Attendance buttons */}
                 <div className="flex flex-wrap gap-2 w-full md:w-auto justify-center" onClick={e => e.stopPropagation()}>
                   <span className="px-3 py-1 bg-zinc-900 text-white dark:bg-white dark:text-black text-[10px] font-bold rounded-full uppercase self-center hidden md:inline-block">Aberto</span>
-                  {proximaJanta.userStatus === 'Presente' ? (
+                  {proximaJanta.responsibles.includes(user.id) ? (
+                    <button disabled className="flex-1 md:flex-none border border-green-500 text-green-600 bg-green-50 dark:bg-green-500/10 px-4 py-2 text-xs font-bold rounded-xl flex items-center gap-2 cursor-not-allowed">
+                      <Lock size={12} /> Responsável (Confirmado)
+                    </button>
+                  ) : proximaJanta.userStatus === 'Presente' ? (
                     <button disabled className="flex-1 md:flex-none border border-green-500 text-green-600 bg-green-50 dark:bg-green-500/10 px-4 py-2 text-xs font-bold rounded-xl flex items-center gap-2 cursor-not-allowed opacity-80">
                       <Lock size={12} /> Presença Confirmada
                     </button>
