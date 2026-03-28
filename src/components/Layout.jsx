@@ -42,8 +42,14 @@ export default function Layout() {
   }, []);
 
   const handleLogout = async () => {
-    await signOut();
-    navigate('/login');
+    try {
+      await signOut();
+    } catch (err) {
+      console.error('Logout error:', err);
+    } finally {
+      // Força a navegação mesmo que dê erro no backend
+      navigate('/login');
+    }
   };
 
   const navItems = [
