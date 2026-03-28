@@ -170,9 +170,13 @@ export default function JantasPage() {
     if (!confirm('Concluir esta janta?')) return;
     setActionLoading(eventId);
     try {
-      await supabase.from('events').update({ status: 'Finalizado' }).eq('id', eventId);
+      const { error } = await supabase.from('events').update({ status: 'Finalizado' }).eq('id', eventId);
+      if (error) throw error;
       await fetchJantas();
-    } catch { alert('Erro ao concluir janta.'); }
+    } catch (err) { 
+      alert('Erro ao concluir janta: ' + (err.message || 'Erro desconhecido.')); 
+      console.error(err);
+    }
     finally { setActionLoading(null); }
   };
 
@@ -180,13 +184,17 @@ export default function JantasPage() {
     if (!confirm('Cancelar esta janta? Os participantes serão notificados.')) return;
     setActionLoading(eventId);
     try {
-      await supabase.from('events').update({ status: 'Cancelado' }).eq('id', eventId);
+      const { error } = await supabase.from('events').update({ status: 'Cancelado' }).eq('id', eventId);
+      if (error) throw error;
       await fetchJantas();
-    } catch { alert('Erro ao cancelar janta.'); }
+    } catch (err) { 
+      alert('Erro ao cancelar janta: ' + (err.message || 'Erro desconhecido.')); 
+      console.error(err);
+    }
     finally { setActionLoading(null); }
   };
 
-  const canEdit = (janta) => isAdmin || janta.created_by === user.id;
+  const canEdit = (janta) => isAdmin;
 
   // Tabs: Canceladas only for ADMIN
   const filters = ['Todas', 'Abertas', 'Concluídas', ...(isAdmin ? ['Canceladas'] : [])];
