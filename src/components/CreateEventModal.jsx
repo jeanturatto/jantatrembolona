@@ -52,7 +52,7 @@ export const CreateEventModal = ({ isOpen, onClose, onSuccess }) => {
     setIsLoading(true);
     
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('events')
         .insert([{ 
           name: name,

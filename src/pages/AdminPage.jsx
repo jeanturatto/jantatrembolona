@@ -11,11 +11,12 @@ export default function AdminPage() {
   
   const [users, setUsers] = useState([]);
   const [allowedEmails, setAllowedEmails] = useState([]);
-  const [newEmail, setNewEmail] = useState('');
-  const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState(null);
 
-  const [nextJantaMsg, setNextJantaMsg] = useState('');
+  // Mensagem tab state
+  const [adminEvents, setAdminEvents] = useState([]);
+  const [selectedEventId, setSelectedEventId] = useState(null);
+  const [generatedMsg, setGeneratedMsg] = useState('');
   const [loadingMsg, setLoadingMsg] = useState(false);
 
   // App settings
@@ -60,53 +61,66 @@ export default function AdminPage() {
     }
   };
 
-  useEffect(() => {
-    loadData();
-    fetchAppSettings();
-  }, []);
-
-  const generateMessage = async () => {
+  const loadAdminEvents = async () => {
     setLoadingMsg(true);
     try {
       const { data: events } = await supabase
         .from('events')
         .select('*, attendances(user_id, status)')
-        .eq('status', 'Aberto')
-        .order('date', { ascending: true })
-        .limit(1);
+        .order('date', { ascending: false });
 
-      if (events && events.length > 0) {
-        const janta = events[0];
-        
-        // Get responsibles names
-        const responsiblesProfiles = await Promise.all(
-          (janta.responsibles || []).map(async id => {
-            const { data } = await supabase.from('profiles').select('name, email').eq('id', id).single();
-            return data;
-          })
-        );
-        const respNames = responsiblesProfiles.map(p => p?.name || p?.email?.split('@')[0]).join(' e ') || 'Nenhum';
-
-        // Get confirmed attendees
-        const confirmedIds = (janta.attendances || [])
-          .filter(a => a.status === 'Presente')
-          .map(a => a.user_id);
-          
-        let confirmedNames = [];
-        if (confirmedIds.length > 0) {
-          const { data: confirmedProfiles } = await supabase
-            .from('profiles')
-            .select('name, email')
-            .in('id', confirmedIds);
-          if (confirmedProfiles) {
-            confirmedNames = confirmedProfiles.map(p => p.name || p.email?.split('@')[0]);
-          }
+      if (events) {
+        setAdminEvents(events);
+        if (events.length > 0 && !selectedEventId) {
+          setSelectedEventId(events[0].id);
         }
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingMsg(false);
+    }
+  };
 
-        const dateObj = new Date(janta.date);
-        const dateStr = dateObj.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const generateMessageForEvent = async (eventId) => {
+    if (!eventId) return;
+    setLoadingMsg(true);
+    try {
+      const janta = adminEvents.find(e => e.id === eventId);
+      if (!janta) return;
+      
+      // Get responsibles names
+      const responsiblesProfiles = await Promise.all(
+        (janta.responsibles || []).map(async id => {
+          const { data } = await supabase.from('profiles').select('name, email').eq('id', id).single();
+          return data;
+        })
+      );
+      const respNames = responsiblesProfiles.map(p => p?.name || p?.email?.split('@')[0]).join(' e ') || 'Nenhum';
 
-        const msg = `*Grupo Trembolona*
+      // Get confirmed attendees
+      const confirmedIds = (janta.attendances || [])
+        .filter(a => a.status === 'Presente')
+        .map(a => a.user_id);
+        
+      let confirmedNames = [];
+      if (confirmedIds.length > 0) {
+        const { data: confirmedProfiles } = await supabase
+          .from('profiles')
+          .select('name, email')
+          .in('id', confirmedIds)
+          .order('name');
+        if (confirmedProfiles) {
+          // Sort by name alphabetically before joining
+          confirmedProfiles.sort((a,b) => (a.name || a.email).localeCompare(b.name || b.email));
+          confirmedNames = confirmedProfiles.map(p => p.name || p.email?.split('@')[0]);
+        }
+      }
+
+      const dateObj = new Date(janta.date);
+      const dateStr = dateObj.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+      const msg = `*Grupo Trembolona*
 Janta data: ${dateStr}
 Responsáveis: ${respNames}
 Local: ${janta.location || 'A definir'}
@@ -114,13 +128,10 @@ Local: ${janta.location || 'A definir'}
 *Confirmados (${confirmedNames.length}):*
 ${confirmedNames.map(n => `- ${n}`).join('\n')}`;
 
-        setNextJantaMsg(msg);
-      } else {
-        setNextJantaMsg('Nenhuma janta aberta encontrada no momento.');
-      }
+      setGeneratedMsg(msg);
     } catch (err) {
       console.error(err);
-      setNextJantaMsg('Erro ao gerar mensagem. Tente novamente.');
+      setGeneratedMsg('Erro ao gerar mensagem. Tente novamente.');
     } finally {
       setLoadingMsg(false);
     }
@@ -128,9 +139,15 @@ ${confirmedNames.map(n => `- ${n}`).join('\n')}`;
 
   useEffect(() => {
     if (activeTab === 'mensagem') {
-      generateMessage();
+      loadAdminEvents();
     }
   }, [activeTab]);
+
+  useEffect(() => {
+    if (selectedEventId) {
+      generateMessageForEvent(selectedEventId);
+    }
+  }, [selectedEventId, adminEvents]);
 
   const toggleStatus = async (userId, currentStatus) => {
     try {
@@ -364,34 +381,57 @@ ${confirmedNames.map(n => `- ${n}`).join('\n')}`;
             </button>
           </div>
         ) : activeTab === 'mensagem' ? (
-          <div className="space-y-6">
-            <p className="text-sm text-zinc-500">Gere um texto padronizado com os dados da próxima janta aberta para avisar o grupo no WhatsApp.</p>
-            {loadingMsg ? (
-              <p className="text-sm text-zinc-500 text-center py-4 animate-pulse">Montando lista de membros...</p>
-            ) : (
-              <div className="space-y-4">
-                <textarea
-                  readOnly
-                  value={nextJantaMsg}
-                  className="w-full h-64 p-4 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-mono outline-none resize-none"
-                />
-                <div className="flex gap-4">
-                  <button 
-                    onClick={() => {
-                      navigator.clipboard.writeText(nextJantaMsg);
-                      alert('Mensagem copiada para a área de transferência!');
-                    }}
-                    disabled={!nextJantaMsg || nextJantaMsg.startsWith('Nenhuma') || nextJantaMsg.startsWith('Erro')}
-                    className="flex-1 bg-green-500 text-white p-3 rounded-xl font-bold text-sm hover:bg-green-600 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Copy size={16} /> Copiar Texto
-                  </button>
-                  <button onClick={generateMessage} className="bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white p-3 rounded-xl font-bold text-sm hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors">
-                    Recarregar
-                  </button>
-                </div>
+          <div className="flex flex-col sm:flex-row gap-6">
+            <div className="sm:w-1/3 border-r border-zinc-200 dark:border-zinc-800 pr-6 space-y-4">
+              <h3 className="font-bold text-sm uppercase text-zinc-500">Selecione a Janta</h3>
+              <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-2">
+                {adminEvents.map(ev => {
+                  const dObj = new Date(ev.date);
+                  const d = dObj.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+                  return (
+                    <button 
+                      key={ev.id}
+                      onClick={() => setSelectedEventId(ev.id)}
+                      className={`w-full text-left p-3 rounded-xl border text-sm transition-colors ${selectedEventId === ev.id ? 'border-zinc-900 bg-zinc-100 dark:border-zinc-100 dark:bg-zinc-800/80 font-bold' : 'border-zinc-200 dark:border-zinc-700 hover:border-zinc-400 bg-zinc-50 dark:bg-zinc-900/50'}`}
+                    >
+                      <div className="truncate">{ev.name || 'Janta'}</div>
+                      <div className="text-xs text-zinc-500 mt-1">{d} • {ev.status}</div>
+                    </button>
+                    )
+                })}
+                {adminEvents.length === 0 && !loadingMsg && <p className="text-xs text-zinc-500">Nenhuma janta encontrada.</p>}
               </div>
-            )}
+            </div>
+
+            <div className="flex-1 space-y-4">
+              <p className="text-sm text-zinc-500">Texto formatado com as confirmações da janta selecionada.</p>
+              {loadingMsg ? (
+                <p className="text-sm text-zinc-500 py-4 animate-pulse">Carregando mensagem...</p>
+              ) : (
+                <div className="space-y-4">
+                  <textarea
+                    readOnly
+                    value={generatedMsg}
+                    className="w-full h-80 p-4 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-mono outline-none resize-none"
+                  />
+                  <div className="flex gap-4">
+                    <button 
+                      onClick={() => {
+                        navigator.clipboard.writeText(generatedMsg);
+                        alert('Mensagem copiada para a área de transferência!');
+                      }}
+                      disabled={!generatedMsg || generatedMsg.startsWith('Nenhuma') || generatedMsg.startsWith('Erro')}
+                      className="flex-1 bg-green-500 text-white p-3 rounded-xl font-bold text-sm hover:bg-green-600 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Copy size={16} /> Copiar Texto
+                    </button>
+                    <button onClick={() => generateMessageForEvent(selectedEventId)} className="bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white p-3 rounded-xl font-bold text-sm hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors">
+                      Recarregar
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         ) : (
           <div className="space-y-6">
