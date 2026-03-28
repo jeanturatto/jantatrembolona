@@ -258,7 +258,7 @@ ${confirmedNames.map(n => `- ${n}`).join('\n')}`;
         <p className="text-sm text-zinc-500">Gerencie os membros do grupo e autorizações de acesso.</p>
       </header>
 
-      <div className="flex gap-4 border-b border-zinc-200 dark:border-zinc-800 pb-1">
+      <div className="flex gap-4 border-b border-zinc-200 dark:border-zinc-800 pb-1 overflow-x-auto scrollbar-hide">
         <button 
           onClick={() => setActiveTab('membros')}
           className={`pb-2 text-sm font-bold px-2 whitespace-nowrap ${activeTab === 'membros' ? "border-b-2 border-zinc-900 dark:border-white text-zinc-900 dark:text-white" : "text-zinc-400"}`}

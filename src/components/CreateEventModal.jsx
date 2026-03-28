@@ -131,6 +131,7 @@ export const CreateEventModal = ({ isOpen, onClose, onSuccess }) => {
           <div className="max-h-48 overflow-y-auto space-y-2 p-1 border border-zinc-100 dark:border-zinc-800 rounded-xl">
             {users.map(u => {
               const uName = u.name || u.email.split('@')[0];
+              const uAvatar = u.avatar_url;
               const isSelected = selectedResponsibles.includes(u.id);
               return (
                 <div 
