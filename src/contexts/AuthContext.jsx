@@ -32,28 +32,43 @@ export const AuthProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    // Obter sessão inicial
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        refreshProfile(session.user.id);
-      } else {
+    let mounted = true;
+
+    // Timeout de segurança: se o Supabase não responder em 5s, libera a tela
+    const timeoutId = setTimeout(() => {
+      if (mounted && loading) {
+        console.warn("AuthContext: Timeout aguardando onAuthStateChange disparar. Liberando loading.");
         setLoading(false);
+      }
+    }, 5000);
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (!mounted) return;
+      
+      try {
+        const currentUser = session?.user || null;
+        setUser(currentUser);
+        
+        if (currentUser) {
+          await refreshProfile(currentUser.id);
+        } else {
+          setProfile(null);
+        }
+      } catch (err) {
+        console.error("AuthContext: Erro durante onAuthStateChange", err);
+      } finally {
+        if (mounted) {
+          clearTimeout(timeoutId);
+          setLoading(false);
+        }
       }
     });
 
-    // Escutar mudanças de autenticação
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        refreshProfile(session.user.id).finally(() => setLoading(false));
-      } else {
-        setProfile(null);
-        setLoading(false);
-      }
-    });
-
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      clearTimeout(timeoutId);
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email, password) => {
