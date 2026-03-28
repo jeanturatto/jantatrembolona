@@ -151,6 +151,11 @@ ${confirmedNames.map(n => `- ${n}`).join('\n')}`;
     }
   }, [selectedEventId, adminEvents]);
 
+  useEffect(() => {
+    loadData();
+    fetchAppSettings();
+  }, []);
+
   const toggleStatus = async (userId, currentStatus) => {
     try {
       await supabase.from('profiles').update({ inadimplente: !currentStatus }).eq('id', userId);
