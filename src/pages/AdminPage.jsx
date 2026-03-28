@@ -11,6 +11,8 @@ export default function AdminPage() {
   
   const [users, setUsers] = useState([]);
   const [allowedEmails, setAllowedEmails] = useState([]);
+  const [newEmail, setNewEmail] = useState('');
+  const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState(null);
 
   // Mensagem tab state
