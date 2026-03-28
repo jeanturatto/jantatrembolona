@@ -97,21 +97,33 @@ export default function DashboardPage() {
 
   // Auto-mark past-deadline on today's open janta
   useEffect(() => {
+    let isSubscribed = true;
     const autoMarkDeadline = async () => {
       const proximaAberta = jantas.find(j => j.status === 'Aberto' && !j.userStatus);
       if (!proximaAberta) return;
       if (!isEventPastDeadline(proximaAberta.rawDate)) return;
       
       const userName = profile?.name || user?.email?.split('@')[0] || 'Usuário';
-      await supabase.from('attendances').upsert({
-        event_id: proximaAberta.id,
-        user_id: user.id,
-        status: 'Falta Justificada',
-        justificativa: `${userName} não confirmou dentro do horário limite (16:00)`
-      }, { onConflict: 'event_id,user_id' });
-      fetchDashboardData();
+      
+      // Quebra o loop imediatamente atualizando o estado local
+      setJantas(prev => prev.map(j => j.id === proximaAberta.id ? { ...j, userStatus: 'Falta Justificada' } : j));
+
+      try {
+        const { error } = await supabase.from('attendances').upsert({
+          event_id: proximaAberta.id,
+          user_id: user.id,
+          status: 'Falta Justificada',
+          justificativa: `${userName} não confirmou dentro do horário limite (16:00)`
+        }, { onConflict: 'event_id,user_id' });
+        
+        if (error) throw error;
+        if (isSubscribed) fetchDashboardData(); // Só recarrega os totais de forma segura
+      } catch (err) {
+        console.error("Erro interno ao fechar janta fora do prazo", err);
+      }
     };
     if (jantas.length > 0 && profile) autoMarkDeadline();
+    return () => { isSubscribed = false; };
   }, [jantas, profile]);
 
   const handleAttendance = async (eventId, statusParam, justificativa = null) => {

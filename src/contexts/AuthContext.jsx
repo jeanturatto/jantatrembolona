@@ -34,39 +34,52 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     let mounted = true;
 
-    // Timeout de segurança: se o Supabase não responder em 5s, libera a tela
-    const timeoutId = setTimeout(() => {
-      if (mounted && loading) {
-        console.warn("AuthContext: Timeout aguardando onAuthStateChange disparar. Liberando loading.");
-        setLoading(false);
+    const initializeAuth = async () => {
+      // Garantia extrema: se tudo falhar, destrava em 5s
+      const fallbackTimer = setTimeout(() => {
+        if (mounted) setLoading(false);
+      }, 5000);
+
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) throw error;
+        
+        const currentUser = session?.user || null;
+        if (mounted) setUser(currentUser);
+        
+        if (currentUser && mounted) {
+          await refreshProfile(currentUser.id);
+        } else if (mounted) {
+          setProfile(null);
+        }
+      } catch (err) {
+        console.error("AuthContext: Erro ao obter getSession", err);
+      } finally {
+        if (mounted) {
+          clearTimeout(fallbackTimer);
+          setLoading(false);
+        }
       }
-    }, 5000);
+    };
+
+    initializeAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (!mounted) return;
       
-      try {
-        const currentUser = session?.user || null;
-        setUser(currentUser);
-        
-        if (currentUser) {
-          await refreshProfile(currentUser.id);
-        } else {
-          setProfile(null);
-        }
-      } catch (err) {
-        console.error("AuthContext: Erro durante onAuthStateChange", err);
-      } finally {
-        if (mounted) {
-          clearTimeout(timeoutId);
-          setLoading(false);
-        }
+      const currentUser = session?.user || null;
+      setUser(currentUser);
+      
+      if (currentUser) {
+        await refreshProfile(currentUser.id);
+      } else {
+        setProfile(null);
       }
+      setLoading(false);
     });
 
     return () => {
       mounted = false;
-      clearTimeout(timeoutId);
       subscription.unsubscribe();
     };
   }, []);

@@ -43,12 +43,17 @@ export default function Layout() {
 
   const handleLogout = async () => {
     try {
-      await signOut();
-    } catch (err) {
-      console.error('Logout error:', err);
+      // Força a remoção do token local para garantir que o usuário não fique preso
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('sb-') && key.endsWith('-auth-token')) {
+          localStorage.removeItem(key);
+        }
+      });
+      // Executa o signout sem travar a thread se o supabase bugar o lock
+      signOut().catch(e => console.error('Supabase signOut error:', e));
     } finally {
-      // Força a navegação mesmo que dê erro no backend
-      navigate('/login');
+      // Hard redirect para limpar a memória do React e forçar o login
+      window.location.href = '/login';
     }
   };
 
