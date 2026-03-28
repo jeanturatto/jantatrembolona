@@ -96,13 +96,16 @@ export default function DashboardPage() {
   }, [user?.id]);
 
   // Auto-mark past-deadline on today's open janta
+  const autoMarkedRef = React.useRef(false);
   useEffect(() => {
     let isSubscribed = true;
     const autoMarkDeadline = async () => {
+      if (autoMarkedRef.current) return;
       const proximaAberta = jantas.find(j => j.status === 'Aberto' && !j.userStatus);
       if (!proximaAberta) return;
       if (!isEventPastDeadline(proximaAberta.rawDate)) return;
       
+      autoMarkedRef.current = true;
       const userName = profile?.name || user?.email?.split('@')[0] || 'Usuário';
       
       // Quebra o loop imediatamente atualizando o estado local
@@ -117,14 +120,15 @@ export default function DashboardPage() {
         }, { onConflict: 'event_id,user_id' });
         
         if (error) throw error;
-        if (isSubscribed) fetchDashboardData(); // Só recarrega os totais de forma segura
+        // Don't call fetchDashboardData() here to avoid race conditions that cause infinite loops.
+        // The local state update above is sufficient to reflect the change visually.
       } catch (err) {
         console.error("Erro interno ao fechar janta fora do prazo", err);
       }
     };
     if (jantas.length > 0 && profile) autoMarkDeadline();
     return () => { isSubscribed = false; };
-  }, [jantas, profile]);
+  }, [jantas, profile, user?.id]);
 
   const handleAttendance = async (eventId, statusParam, justificativa = null) => {
     const janta = jantas.find(j => j.id === eventId);

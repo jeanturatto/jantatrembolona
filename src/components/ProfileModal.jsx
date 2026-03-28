@@ -126,7 +126,7 @@ export const ProfileModal = ({ isOpen, onClose, user, profile, onSave }) => {
         <div className="flex gap-3">
           <button
             onClick={onClose}
-            className="flex-1 border border-zinc-200 dark:border-zinc-700 text-white dark:text-white hover:bg-zinc-800 transition-colors p-3 rounded-xl font-bold text-sm"
+            className="flex-1 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors p-3 rounded-xl font-bold text-sm"
           >
             Cancelar
           </button>

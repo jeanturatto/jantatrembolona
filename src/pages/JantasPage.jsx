@@ -210,13 +210,14 @@ export default function JantasPage() {
     <div className="space-y-6 animate-in fade-in pb-20">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mt-2 mb-4">
         <h1 className="text-2xl font-bold">Jantas</h1>
-        {/* All users can create jantas */}
-        <button
-          onClick={() => setIsCreateOpen(true)}
-          className="bg-zinc-900 text-white dark:bg-white dark:text-black px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:opacity-90 transition-opacity w-full sm:w-auto justify-center mt-2 sm:mt-0"
-        >
-          <Plus size={18} /> Nova Janta
-        </button>
+        {isAdmin && (
+          <button
+            onClick={() => setIsCreateOpen(true)}
+            className="bg-zinc-900 text-white dark:bg-white dark:text-black px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:opacity-90 transition-opacity w-full sm:w-auto justify-center mt-2 sm:mt-0"
+          >
+            <Plus size={18} /> Nova Janta
+          </button>
+        )}
       </div>
 
       {/* Filters */}
