@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ShieldAlert, User, CheckCircle, XCircle, MailPlus, Trash2, Pencil, Settings, Upload } from 'lucide-react';
+import { ShieldAlert, User, CheckCircle, XCircle, MailPlus, Trash2, Pencil, Settings, Upload, MessageSquare, Copy } from 'lucide-react';
 import { Card } from '../components/Card';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -14,6 +14,9 @@ export default function AdminPage() {
   const [newEmail, setNewEmail] = useState('');
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState(null);
+
+  const [nextJantaMsg, setNextJantaMsg] = useState('');
+  const [loadingMsg, setLoadingMsg] = useState(false);
 
   // App settings
   const [appName, setAppName] = useState('Janta Trembolona');
@@ -61,6 +64,73 @@ export default function AdminPage() {
     loadData();
     fetchAppSettings();
   }, []);
+
+  const generateMessage = async () => {
+    setLoadingMsg(true);
+    try {
+      const { data: events } = await supabase
+        .from('events')
+        .select('*, attendances(user_id, status)')
+        .eq('status', 'Aberto')
+        .order('date', { ascending: true })
+        .limit(1);
+
+      if (events && events.length > 0) {
+        const janta = events[0];
+        
+        // Get responsibles names
+        const responsiblesProfiles = await Promise.all(
+          (janta.responsibles || []).map(async id => {
+            const { data } = await supabase.from('profiles').select('name, email').eq('id', id).single();
+            return data;
+          })
+        );
+        const respNames = responsiblesProfiles.map(p => p?.name || p?.email?.split('@')[0]).join(' e ') || 'Nenhum';
+
+        // Get confirmed attendees
+        const confirmedIds = (janta.attendances || [])
+          .filter(a => a.status === 'Presente')
+          .map(a => a.user_id);
+          
+        let confirmedNames = [];
+        if (confirmedIds.length > 0) {
+          const { data: confirmedProfiles } = await supabase
+            .from('profiles')
+            .select('name, email')
+            .in('id', confirmedIds);
+          if (confirmedProfiles) {
+            confirmedNames = confirmedProfiles.map(p => p.name || p.email?.split('@')[0]);
+          }
+        }
+
+        const dateObj = new Date(janta.date);
+        const dateStr = dateObj.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+        const msg = `*Grupo Trembolona*
+Janta data: ${dateStr}
+Responsáveis: ${respNames}
+Local: ${janta.location || 'A definir'}
+
+*Confirmados (${confirmedNames.length}):*
+${confirmedNames.map(n => `- ${n}`).join('\n')}`;
+
+        setNextJantaMsg(msg);
+      } else {
+        setNextJantaMsg('Nenhuma janta aberta encontrada no momento.');
+      }
+    } catch (err) {
+      console.error(err);
+      setNextJantaMsg('Erro ao gerar mensagem. Tente novamente.');
+    } finally {
+      setLoadingMsg(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'mensagem') {
+      generateMessage();
+    }
+  }, [activeTab]);
 
   const toggleStatus = async (userId, currentStatus) => {
     try {
@@ -186,6 +256,13 @@ export default function AdminPage() {
           <Settings size={16} className="inline mr-2" />
           Configurações da Página
         </button>
+        <button 
+          onClick={() => setActiveTab('mensagem')}
+          className={`pb-2 text-sm font-bold px-2 whitespace-nowrap ${activeTab === 'mensagem' ? "border-b-2 border-zinc-900 dark:border-white text-zinc-900 dark:text-white" : "text-zinc-400"}`}
+        >
+          <MessageSquare size={16} className="inline mr-2" />
+          Mensagem WhatsApp
+        </button>
       </div>
 
       <Card>
@@ -285,6 +362,36 @@ export default function AdminPage() {
               className="w-full bg-zinc-900 dark:bg-white text-white dark:text-black p-3 rounded-xl font-bold text-sm hover:opacity-90 transition-opacity disabled:opacity-60">
               {savingSettings ? 'Salvando...' : 'Salvar Configurações'}
             </button>
+          </div>
+        ) : activeTab === 'mensagem' ? (
+          <div className="space-y-6">
+            <p className="text-sm text-zinc-500">Gere um texto padronizado com os dados da próxima janta aberta para avisar o grupo no WhatsApp.</p>
+            {loadingMsg ? (
+              <p className="text-sm text-zinc-500 text-center py-4 animate-pulse">Montando lista de membros...</p>
+            ) : (
+              <div className="space-y-4">
+                <textarea
+                  readOnly
+                  value={nextJantaMsg}
+                  className="w-full h-64 p-4 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-mono outline-none resize-none"
+                />
+                <div className="flex gap-4">
+                  <button 
+                    onClick={() => {
+                      navigator.clipboard.writeText(nextJantaMsg);
+                      alert('Mensagem copiada para a área de transferência!');
+                    }}
+                    disabled={!nextJantaMsg || nextJantaMsg.startsWith('Nenhuma') || nextJantaMsg.startsWith('Erro')}
+                    className="flex-1 bg-green-500 text-white p-3 rounded-xl font-bold text-sm hover:bg-green-600 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Copy size={16} /> Copiar Texto
+                  </button>
+                  <button onClick={generateMessage} className="bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white p-3 rounded-xl font-bold text-sm hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors">
+                    Recarregar
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <div className="space-y-6">
