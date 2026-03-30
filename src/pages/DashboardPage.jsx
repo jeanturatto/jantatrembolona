@@ -107,6 +107,18 @@ export default function DashboardPage() {
     if (user?.id) fetchDashboardData();
   }, [user?.id]);
 
+  // Re-busca dados quando a aba volta ao foco (resolve perda de dados por inatividade)
+  useEffect(() => {
+    if (!user?.id) return;
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        fetchDashboardData();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [user?.id]);
+
   // Auto-mark past-deadline on today's open janta
   const autoMarkedRef = React.useRef(false);
   useEffect(() => {

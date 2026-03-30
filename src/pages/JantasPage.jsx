@@ -49,12 +49,23 @@ export default function JantasPage() {
   const [ausenciasNoMes, setAusenciasNoMes] = useState(0);
   const LIMITE_AUSENCIAS = 3;
 
-  const fetchJantas = async () => {
+  const fetchJantas = async (retryOnAuthError = true) => {
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('events')
         .select('*, attendances(user_id, status)')
         .order('date', { ascending: false });
+
+      // Detecta erro de autenticação e tenta renovar sessão
+      if (error) {
+        console.error('Erro ao buscar jantas:', error);
+        if (retryOnAuthError && (error.code === 'PGRST301' || error.message?.includes('JWT') || error.message?.includes('token'))) {
+          await supabase.auth.refreshSession();
+          return fetchJantas(false); // Re-tenta uma vez após refresh
+        }
+        setLoading(false);
+        return;
+      }
 
       if (data) {
         const today = new Date();
@@ -103,6 +114,17 @@ export default function JantasPage() {
   };
 
   useEffect(() => { fetchJantas(); }, [user.id]);
+
+  // Re-busca dados quando a aba volta ao foco
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        fetchJantas();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, []);
 
   // Count current month absences
   useEffect(() => {
