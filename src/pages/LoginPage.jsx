@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Utensils } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { Navigate, useNavigate } from 'react-router-dom';
@@ -21,6 +21,7 @@ export default function LoginPage() {
   const [pix, setPix] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
@@ -40,7 +41,7 @@ export default function LoginPage() {
     setSuccess(null);
 
     if (isLogin) {
-      const { error } = await signIn(email, password);
+      const { error } = await signIn(email, password, rememberMe);
       if (error) {
          setError(translateError(error.message));
          setIsLoading(false);
@@ -56,6 +57,7 @@ export default function LoginPage() {
          setSuccess("Conta criada com sucesso! Você já pode fazer login.");
          setIsLogin(true);
          setPassword('');
+         setEmail('');
       }
     }
   };
@@ -95,6 +97,7 @@ export default function LoginPage() {
                     onChange={(e) => setName(e.target.value)}
                     required={!isLogin}
                     placeholder="Seu nome completo"
+                    autoComplete="off"
                     className="w-full p-3 bg-white text-zinc-900 border border-zinc-200 rounded-xl focus:ring-2 ring-zinc-900 outline-none transition-all placeholder:text-zinc-400"
                   />
                 </div>
@@ -107,6 +110,7 @@ export default function LoginPage() {
                       onChange={(e) => setPhone(e.target.value)}
                       required={!isLogin}
                       placeholder="(00) 00000-0000"
+                      autoComplete="off"
                       className="w-full p-3 bg-white text-zinc-900 border border-zinc-200 rounded-xl focus:ring-2 ring-zinc-900 outline-none transition-all placeholder:text-zinc-400"
                     />
                   </div>
@@ -118,6 +122,7 @@ export default function LoginPage() {
                       onChange={(e) => setPix(e.target.value)}
                       required={!isLogin}
                       placeholder="Chave PIX"
+                      autoComplete="off"
                       className="w-full p-3 bg-white text-zinc-900 border border-zinc-200 rounded-xl focus:ring-2 ring-zinc-900 outline-none transition-all placeholder:text-zinc-400"
                     />
                   </div>
@@ -133,6 +138,7 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 placeholder="seu@email.com"
+                autoComplete="new-email"
                 className="w-full p-3 bg-white text-zinc-900 border border-zinc-200 rounded-xl focus:ring-2 ring-zinc-900 outline-none transition-all placeholder:text-zinc-400"
               />
             </div>
@@ -145,9 +151,34 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 placeholder="••••••••"
+                autoComplete="new-password"
                 className="w-full p-3 bg-white text-zinc-900 border border-zinc-200 rounded-xl focus:ring-2 ring-zinc-900 outline-none transition-all placeholder:text-zinc-400"
               />
             </div>
+
+            {/* Lembrar usuário — só no login */}
+            {isLogin && (
+              <label className="flex items-center gap-3 cursor-pointer group select-none">
+                <div className="relative shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="peer sr-only"
+                  />
+                  <div className="w-5 h-5 border-2 border-zinc-300 dark:border-zinc-600 rounded-md peer-checked:bg-zinc-900 dark:peer-checked:bg-white peer-checked:border-zinc-900 dark:peer-checked:border-white transition-all flex items-center justify-center">
+                    {rememberMe && (
+                      <svg className="w-3 h-3 text-white dark:text-black" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </div>
+                </div>
+                <span className="text-sm text-zinc-500 group-hover:text-zinc-700 dark:group-hover:text-zinc-300 transition-colors font-medium">
+                  Lembrar usuário neste dispositivo
+                </span>
+              </label>
+            )}
           </div>
 
           <button 
@@ -173,6 +204,7 @@ export default function LoginPage() {
             onClick={() => {
               setIsLogin(!isLogin);
               setError(null);
+              setSuccess(null);
             }} 
             className="text-zinc-900 dark:text-white font-bold underline"
           >

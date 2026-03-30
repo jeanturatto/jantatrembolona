@@ -9,22 +9,27 @@ import { EventDetailModal } from '../components/EventDetailModal';
 import { JustificativaModal } from '../components/JustificativaModal';
 import { AdminAttendanceModal } from '../components/AdminAttendanceModal';
 
+// Regra: o prazo de confirmação encerra no DIA ANTERIOR à janta às 16:00 BRT.
 const isEventPastDeadline = (eventDateStr) => {
   if (!eventDateStr) return false;
   const now = new Date();
   const brtOffset = -3 * 60;
   const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
   const brt = new Date(utcMs + brtOffset * 60000);
-  
+
   const eventDate = new Date(eventDateStr);
-  const todayStart = new Date(brt.getFullYear(), brt.getMonth(), brt.getDate());
-  const eventStart = new Date(eventDate.getUTCFullYear(), eventDate.getUTCMonth(), eventDate.getUTCDate());
-  
-  if (todayStart > eventStart) return true;
-  if (todayStart.getTime() === eventStart.getTime()) {
-    return brt.getHours() >= 16;
-  }
-  return false;
+  const eventYear = eventDate.getUTCFullYear();
+  const eventMonth = eventDate.getUTCMonth();
+  const eventDay = eventDate.getUTCDate();
+
+  // Prazo = dia anterior à janta às 16:00 (em horário BRT)
+  const deadlineBRT = new Date(eventYear, eventMonth, eventDay - 1, 16, 0, 0, 0);
+  const brtAsDate = new Date(
+    brt.getFullYear(), brt.getMonth(), brt.getDate(),
+    brt.getHours(), brt.getMinutes(), brt.getSeconds()
+  );
+
+  return brtAsDate >= deadlineBRT;
 };
 
 export default function JantasPage() {
@@ -215,7 +220,7 @@ export default function JantasPage() {
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in pb-20">
+    <div className="space-y-6 animate-in fade-in pb-20 min-w-0 overflow-x-hidden">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mt-2 mb-4">
         <h1 className="text-2xl font-bold">Jantas</h1>
         {isAdmin && (
@@ -247,7 +252,11 @@ export default function JantasPage() {
         )}
 
         {filteredJantas.map(janta => (
-          <Card key={janta.id} className={`flex flex-col gap-4 hover:shadow-md transition-shadow ${janta.status === 'Cancelado' ? 'opacity-70' : ''}`}>
+          <Card 
+            key={janta.id} 
+            onClick={() => setDetailEvent(janta)}
+            className={`flex flex-col gap-4 hover:shadow-md transition-shadow cursor-pointer ${janta.status === 'Cancelado' ? 'opacity-70' : ''}`}
+          >
             <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-4">
               {/* Info */}
               <div className="flex-1">
@@ -271,7 +280,10 @@ export default function JantasPage() {
                   <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-tighter">Confirmados</span>
                 </div>
 
-                <div className="flex items-center gap-2 flex-wrap justify-end">
+                <div 
+                  className="flex items-center gap-2 flex-wrap justify-end"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   {/* Ver */}
                   <button onClick={() => setDetailEvent(janta)}
                     className="flex items-center gap-1 text-[10px] font-bold px-2.5 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:border-zinc-400 transition-colors">
@@ -315,7 +327,10 @@ export default function JantasPage() {
 
             {/* Attendance buttons (only for Aberto and not Cancelado) */}
             {janta.status === 'Aberto' && (
-              <div className="flex flex-wrap gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800">
+              <div 
+                className="flex flex-col sm:flex-row flex-wrap gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800"
+                onClick={(e) => e.stopPropagation()}
+              >
                 {janta.responsibles.includes(user.id) ? (
                   <button disabled className="flex-1 sm:flex-none text-xs font-bold py-2 px-4 rounded-xl border border-green-500 text-green-600 bg-green-50 dark:bg-green-500/10 min-w-[140px] flex items-center gap-2 cursor-not-allowed">
                     <Lock size={12} /> Responsável (Confirmado)

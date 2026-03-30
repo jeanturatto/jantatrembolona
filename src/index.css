@@ -46,8 +46,19 @@
 
 /* Inter font */
 
-body {
+html, body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+/* Mobile: garantir que elementos não ultrapassem a tela */
+* {
+  box-sizing: border-box;
+}
+
+img, video, table {
+  max-width: 100%;
 }

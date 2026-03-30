@@ -22,6 +22,7 @@ export default function Layout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [appConfig, setAppConfig] = useState({ name: 'Janta Trembolona', subtitle: 'Grupo de Jantas', iconUrl: '' });
+  const [toast, setToast] = useState(null);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -63,32 +64,35 @@ export default function Layout() {
     ...(isAdmin ? [{ to: '/relatorios', label: 'Relatórios', icon: BarChart3 }] : []),
   ];
 
+  const showToast = (msg, type = 'success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
   const handleProfileSave = async ({ phone, name, avatarUrl, pix }) => {
+    // Fecha o modal imediatamente para UX fluida
+    setIsProfileOpen(false);
     try {
-      // 1. Update profiles table
       const { error } = await supabase
         .from('profiles')
         .update({ telefone: phone, name, pix, avatar_url: avatarUrl })
         .eq('id', user.id);
       if (error) throw error;
 
-      // 2. Sync auth metadata so Supabase panel stays in sync
       await supabase.auth.updateUser({
         data: { name, phone, pix }
       });
 
-      // 3. Refresh context BEFORE closing modal so UI updates immediately
       await refreshProfile(user.id);
-      setIsProfileOpen(false);
-      alert('Perfil atualizado com sucesso!');
+      showToast('Perfil atualizado com sucesso! ✓');
     } catch (err) {
-      alert('Erro ao atualizar perfil: ' + err.message);
+      showToast('Erro ao atualizar perfil: ' + err.message, 'error');
       console.error(err);
     }
   };
 
   return (
-    <div className="flex min-h-screen bg-zinc-50/50 dark:bg-black text-zinc-900 dark:text-zinc-100 font-sans">
+    <div className="flex min-h-screen bg-zinc-50/50 dark:bg-black text-zinc-900 dark:text-zinc-100 font-sans overflow-x-hidden">
       
       {/* MOBILE HEADER */}
       <header className="md:hidden fixed top-0 w-full h-16 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between px-4 z-40">
@@ -220,11 +224,22 @@ export default function Layout() {
       </aside>
 
       {/* MAIN CONTENT */}
-      <main className="flex-1 md:ml-64 pt-16 md:pt-0 p-4 md:p-10 max-w-6xl w-full">
+      <main className="flex-1 md:ml-64 pt-16 md:pt-0 p-4 md:p-10 w-full min-w-0 overflow-x-hidden">
         <div className="max-w-5xl mx-auto h-full flex flex-col">
           <Outlet />
         </div>
       </main>
+
+      {/* Toast notification */}
+      {toast && (
+        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] px-5 py-3 rounded-2xl text-sm font-bold shadow-xl animate-in fade-in ${
+          toast.type === 'error'
+            ? 'bg-red-500 text-white'
+            : 'bg-zinc-900 dark:bg-white text-white dark:text-black'
+        }`}>
+          {toast.msg}
+        </div>
+      )}
 
       <ProfileModal 
         isOpen={isProfileOpen} 

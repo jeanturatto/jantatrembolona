@@ -252,7 +252,7 @@ ${confirmedNames.map(n => `- ${n}`).join('\n')}`;
   };
 
   return (
-    <div className="space-y-8 animate-in slide-in-from-bottom-4">
+    <div className="space-y-8 animate-in slide-in-from-bottom-4 min-w-0 overflow-x-hidden">
       <header>
         <h1 className="text-2xl font-bold">Painel de Administração</h1>
         <p className="text-sm text-zinc-500">Gerencie os membros do grupo e autorizações de acesso.</p>
@@ -389,7 +389,7 @@ ${confirmedNames.map(n => `- ${n}`).join('\n')}`;
           </div>
         ) : activeTab === 'mensagem' ? (
           <div className="flex flex-col sm:flex-row gap-6">
-            <div className="sm:w-1/3 border-r border-zinc-200 dark:border-zinc-800 pr-6 space-y-4">
+            <div className="sm:w-1/3 sm:border-r border-zinc-200 dark:border-zinc-800 sm:pr-6 space-y-4 pb-4 sm:pb-0 border-b sm:border-b-0 border-zinc-200 dark:border-zinc-800">
               <h3 className="font-bold text-sm uppercase text-zinc-500">Selecione a Janta</h3>
               <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-2">
                 {adminEvents.map(ev => {

@@ -198,8 +198,8 @@ export default function RelatoriosPage() {
   const years = [now.getFullYear() - 1, now.getFullYear()];
 
   return (
-    <div className="space-y-6 animate-in fade-in">
-      <header className="flex items-center justify-between gap-4">
+    <div className="space-y-6 animate-in fade-in min-w-0 overflow-x-hidden">
+      <header className="flex flex-wrap items-start md:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">Relatórios</h1>
           <p className="text-sm text-zinc-500">{totalJantas} jantas · {membersData.length} membros</p>
@@ -252,8 +252,8 @@ export default function RelatoriosPage() {
         <h3 className="font-bold mb-4 capitalize">{MONTHS[selectedMonth]} {selectedYear}</h3>
 
         {/* Printable area */}
-        <div ref={printRef}>
-          <table className="w-full text-left text-sm whitespace-nowrap">
+        <div ref={printRef} className="overflow-x-auto -mx-4 md:mx-0">
+          <table className="w-full text-left text-sm" style={{minWidth: '520px'}}>
             <thead className="text-zinc-400 font-bold border-b border-zinc-100 dark:border-zinc-800 text-[11px] uppercase tracking-wider">
               <tr>
                 <th className="pb-3 pr-4">#</th>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Camera } from 'lucide-react';
 import { Modal } from './Modal';
 import { supabase } from '../lib/supabase';
@@ -132,7 +132,10 @@ export const ProfileModal = ({ isOpen, onClose, user, profile, onSave }) => {
           </button>
           <button
             disabled={uploading}
-            onClick={() => onSave?.({ phone, name, avatarUrl, pix })}
+            onClick={() => {
+              // Fecha o modal imediatamente e passa dados para o pai salvar
+              onSave?.({ phone, name, avatarUrl, pix });
+            }}
             className="flex-1 bg-zinc-900 text-white dark:bg-white dark:text-black p-3 rounded-xl font-bold text-sm transition-transform active:scale-[0.98] disabled:opacity-50"
           >
             {uploading ? 'Aguarde...' : 'Salvar'}
