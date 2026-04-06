@@ -1,9 +1,27 @@
 import React, { useEffect, useState } from 'react';
-import { MapPin, Calendar, Users, Utensils } from 'lucide-react';
+import { MapPin, Calendar, Users, Utensils, CheckCircle2, XCircle, AlertCircle, Lock } from 'lucide-react';
 import { Modal } from './Modal';
 import { supabase } from '../lib/supabase';
 
-export const EventDetailModal = ({ isOpen, onClose, event }) => {
+/**
+ * Props:
+ *   event         - formatted event object (with id, name, dateFormatted, location, status, attendees, responsibles, userStatus, rawDate)
+ *   isOpen        - bool
+ *   onClose       - fn
+ *   onAttendance  - fn(eventId, status) — called when user picks Presente / Ausente
+ *   onJustificativa - fn(eventId) — called when user picks Falta Justificada
+ *   actionLoading - bool
+ *   pastDeadline  - bool
+ */
+export const EventDetailModal = ({
+  isOpen,
+  onClose,
+  event,
+  onAttendance,
+  onJustificativa,
+  actionLoading,
+  pastDeadline,
+}) => {
   const [responsaveis, setResponsaveis] = useState([]);
 
   useEffect(() => {
@@ -22,6 +40,20 @@ export const EventDetailModal = ({ isOpen, onClose, event }) => {
   }, [isOpen, event]);
 
   if (!event) return null;
+
+  const isOpen_ = event.status === 'Aberto';
+  const userStatus = event.userStatus;
+
+  const btnBase = 'flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border text-xs font-bold transition-all active:scale-[0.97]';
+  const btnPresente = userStatus === 'Presente'
+    ? 'bg-green-500 border-green-500 text-white'
+    : 'border-green-400 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20';
+  const btnJust = userStatus === 'Falta Justificada'
+    ? 'bg-amber-500 border-amber-500 text-white'
+    : 'border-amber-400 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20';
+  const btnAusente = userStatus === 'Ausente'
+    ? 'bg-zinc-500 border-zinc-500 text-white'
+    : 'border-zinc-300 dark:border-zinc-600 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800';
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={event.name || 'Detalhes da Janta'}>
@@ -90,6 +122,43 @@ export const EventDetailModal = ({ isOpen, onClose, event }) => {
             <p className="text-sm text-zinc-400 italic">Nenhum responsável definido.</p>
           )}
         </div>
+
+        {/* Attendance buttons — only for open events with handler prop */}
+        {isOpen_ && onAttendance && (
+          <div className="border-t border-zinc-100 dark:border-zinc-800 pt-4 space-y-3">
+            <p className="text-[10px] font-bold text-zinc-400 uppercase">Sua confirmação</p>
+            {pastDeadline ? (
+              <div className="flex items-center gap-2 p-3 bg-zinc-50 dark:bg-zinc-800 rounded-xl">
+                <Lock size={14} className="text-zinc-400 shrink-0" />
+                <p className="text-xs text-zinc-500">Prazo encerrado às 16h do dia anterior.</p>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <button
+                  disabled={!!actionLoading}
+                  onClick={() => { onAttendance(event.id, 'Presente'); onClose(); }}
+                  className={`${btnBase} ${btnPresente}`}
+                >
+                  <CheckCircle2 size={14} /> Presente
+                </button>
+                <button
+                  disabled={!!actionLoading}
+                  onClick={() => { onJustificativa?.(event.id); onClose(); }}
+                  className={`${btnBase} ${btnJust}`}
+                >
+                  <AlertCircle size={14} /> Justificada
+                </button>
+                <button
+                  disabled={!!actionLoading}
+                  onClick={() => { onAttendance(event.id, 'Ausente'); onClose(); }}
+                  className={`${btnBase} ${btnAusente}`}
+                >
+                  <XCircle size={14} /> Não Vou
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         <button
           onClick={onClose}

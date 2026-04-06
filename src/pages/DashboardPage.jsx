@@ -52,7 +52,7 @@ export default function DashboardPage() {
         { data: attendances },
         { data: allProfiles }
       ] = await Promise.all([
-        supabase.from('events').select('*, attendances(user_id, status)').order('date', { ascending: false }).limit(5),
+        supabase.from('events').select('*, attendances(user_id, status)').eq('status', 'Aberto').order('date', { ascending: true }),
         supabase.from('profiles').select('*', { count: 'exact', head: true }),
         supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('inadimplente', true),
         supabase.from('attendances').select('*').eq('user_id', user.id),
@@ -348,6 +348,10 @@ export default function DashboardPage() {
         isOpen={!!detailEvent}
         onClose={() => setDetailEvent(null)}
         event={detailEvent}
+        onAttendance={handleAttendance}
+        onJustificativa={handleJustificado}
+        actionLoading={actionLoading}
+        pastDeadline={detailEvent ? isEventPastDeadline(detailEvent.rawDate) : false}
       />
     </div>
   );

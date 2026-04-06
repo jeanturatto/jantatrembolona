@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ShieldAlert, User, CheckCircle, XCircle, MailPlus, Trash2, Pencil, Settings, Upload, MessageSquare, Copy } from 'lucide-react';
+import { ShieldAlert, User, CheckCircle, XCircle, MailPlus, Trash2, Pencil, Settings, Upload, MessageSquare, Copy, Ban } from 'lucide-react';
 import { Card } from '../components/Card';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -221,6 +221,17 @@ ${confirmedNames.map(n => `- ${n}`).join('\n')}`;
       fetchInvites();
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleBlockEmail = async (email) => {
+    if (!confirm(`Bloquear ${email}? O membro não poderá mais criar novas contas com este e-mail.`)) return;
+    try {
+      // Remove from allowed_emails if present (prevents future registration)
+      await supabase.from('allowed_emails').delete().eq('email', email);
+      fetchInvites();
+    } catch (err) {
+      alert('Erro ao bloquear: ' + (err?.message || 'Erro desconhecido'));
     }
   };
 
@@ -476,7 +487,7 @@ ${confirmedNames.map(n => `- ${n}`).join('\n')}`;
                 value={newEmail}
                 onChange={e => setNewEmail(e.target.value)}
                 placeholder="email@autorizado.com" 
-                className="flex-1 p-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl focus:ring-2 ring-zinc-900 outline-none transition-all placeholder:text-zinc-400 text-sm"
+                className="flex-1 p-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:border-zinc-900 dark:focus:border-white transition-all placeholder:text-zinc-400 text-sm font-medium text-zinc-900 dark:text-white"
               />
               <button 
                 type="submit" 
@@ -486,15 +497,19 @@ ${confirmedNames.map(n => `- ${n}`).join('\n')}`;
               </button>
             </form>
 
+            {/* Section 1: invited but not yet registered */}
             <div className="space-y-3">
-              <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-tighter">Emails Autorizados Pendentes</h4>
+              <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-tighter flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-amber-400 inline-block"></span>
+                Aguardando Cadastro
+              </h4>
               {allowedEmails.filter(ae => !users.some(u => u.email === ae.email)).map(inv => (
                 <div key={inv.email} className="flex items-center justify-between p-3 bg-zinc-50 dark:bg-zinc-800/50 border border-dashed border-zinc-200 dark:border-zinc-700 rounded-xl">
                    <div>
                      <p className="text-sm font-bold text-zinc-900 dark:text-white">{inv.email}</p>
-                     <p className="text-[10px] text-zinc-500">Adicionado em {new Date(inv.created_at).toLocaleDateString()}</p>
+                     <p className="text-[10px] text-zinc-500">Convidado em {new Date(inv.created_at).toLocaleDateString('pt-BR')}</p>
                    </div>
-                   <button onClick={() => handleRemoveEmail(inv.email)} className="p-2 text-zinc-400 hover:text-red-500 transition-colors">
+                   <button onClick={() => handleRemoveEmail(inv.email)} className="p-2 text-zinc-400 hover:text-red-500 transition-colors" title="Remover convite">
                      <Trash2 size={16} />
                    </button>
                 </div>
@@ -502,6 +517,54 @@ ${confirmedNames.map(n => `- ${n}`).join('\n')}`;
               {allowedEmails.filter(ae => !users.some(u => u.email === ae.email)).length === 0 && (
                 <p className="text-[11px] text-zinc-500 italic">Nenhum email aguardando cadastro.</p>
               )}
+            </div>
+
+            {/* Section 2: all registered member emails */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-tighter flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-green-500 inline-block"></span>
+                Membros Cadastrados
+              </h4>
+              {users.map(u => {
+                const isAuthorized = allowedEmails.some(ae => ae.email === u.email);
+                return (
+                  <div key={u.id} className="flex items-center justify-between p-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-xl">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center font-bold text-zinc-500 overflow-hidden shrink-0 text-xs">
+                        {u.avatar_url ? <img src={u.avatar_url} alt="" className="w-full h-full object-cover" /> : (u.name || u.email || 'U').charAt(0).toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-zinc-900 dark:text-white truncate capitalize">{u.name || u.email?.split('@')[0]}</p>
+                        <p className="text-[10px] text-zinc-500 truncate">{u.email}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 ml-2">
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
+                        isAuthorized ? 'border-green-400 text-green-600 bg-green-50 dark:bg-green-900/20' : 'border-red-300 text-red-500 bg-red-50 dark:bg-red-900/20'
+                      }`}>{isAuthorized ? 'Autorizado' : 'Bloqueado'}</span>
+                      {isAuthorized ? (
+                        <button
+                          onClick={() => handleBlockEmail(u.email)}
+                          className="flex items-center gap-1 text-[10px] font-bold px-2.5 py-1.5 rounded-lg border border-red-200 dark:border-red-900/40 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                        >
+                          <Ban size={11} /> Bloquear
+                        </button>
+                      ) : (
+                        <button
+                          onClick={async () => {
+                            await supabase.from('allowed_emails').insert([{ email: u.email }]);
+                            fetchInvites();
+                          }}
+                          className="flex items-center gap-1 text-[10px] font-bold px-2.5 py-1.5 rounded-lg border border-green-300 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
+                        >
+                          <CheckCircle size={11} /> Reativar
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+              {users.length === 0 && <p className="text-[11px] text-zinc-500 italic">Nenhum membro cadastrado.</p>}
             </div>
           </div>
         )}
