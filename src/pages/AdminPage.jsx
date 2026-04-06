@@ -224,11 +224,16 @@ ${confirmedNames.map(n => `- ${n}`).join('\n')}`;
     }
   };
 
-  const handleBlockEmail = async (email) => {
-    if (!confirm(`Bloquear ${email}? O membro não poderá mais criar novas contas com este e-mail.`)) return;
+  const handleBlockEmail = async (email, userId) => {
+    if (!confirm(`Bloquear ${email}? O acesso deste membro será revogado imediatamente.`)) return;
     try {
-      // Remove from allowed_emails if present (prevents future registration)
+      // Marca o perfil como bloqueado (impede acesso mesmo com sessão ativa)
+      if (userId) {
+        await supabase.from('profiles').update({ blocked: true }).eq('id', userId);
+      }
+      // Remove do allowed_emails (impede novo registro)
       await supabase.from('allowed_emails').delete().eq('email', email);
+      fetchUsers();
       fetchInvites();
     } catch (err) {
       alert('Erro ao bloquear: ' + (err?.message || 'Erro desconhecido'));
@@ -526,7 +531,7 @@ ${confirmedNames.map(n => `- ${n}`).join('\n')}`;
                 Membros Cadastrados
               </h4>
               {users.map(u => {
-                const isAuthorized = allowedEmails.some(ae => ae.email === u.email);
+                const isBlocked = u.blocked === true;
                 return (
                   <div key={u.id} className="flex items-center justify-between p-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-xl">
                     <div className="flex items-center gap-3 min-w-0">
@@ -540,11 +545,11 @@ ${confirmedNames.map(n => `- ${n}`).join('\n')}`;
                     </div>
                     <div className="flex items-center gap-2 shrink-0 ml-2">
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
-                        isAuthorized ? 'border-green-400 text-green-600 bg-green-50 dark:bg-green-900/20' : 'border-red-300 text-red-500 bg-red-50 dark:bg-red-900/20'
-                      }`}>{isAuthorized ? 'Autorizado' : 'Bloqueado'}</span>
-                      {isAuthorized ? (
+                        isBlocked ? 'border-red-300 text-red-500 bg-red-50 dark:bg-red-900/20' : 'border-green-400 text-green-600 bg-green-50 dark:bg-green-900/20'
+                      }`}>{isBlocked ? 'Bloqueado' : 'Ativo'}</span>
+                      {!isBlocked ? (
                         <button
-                          onClick={() => handleBlockEmail(u.email)}
+                          onClick={() => handleBlockEmail(u.email, u.id)}
                           className="flex items-center gap-1 text-[10px] font-bold px-2.5 py-1.5 rounded-lg border border-red-200 dark:border-red-900/40 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                         >
                           <Ban size={11} /> Bloquear
@@ -552,7 +557,9 @@ ${confirmedNames.map(n => `- ${n}`).join('\n')}`;
                       ) : (
                         <button
                           onClick={async () => {
-                            await supabase.from('allowed_emails').insert([{ email: u.email }]);
+                            await supabase.from('profiles').update({ blocked: false }).eq('id', u.id);
+                            await supabase.from('allowed_emails').upsert([{ email: u.email }], { onConflict: 'email' });
+                            fetchUsers();
                             fetchInvites();
                           }}
                           className="flex items-center gap-1 text-[10px] font-bold px-2.5 py-1.5 rounded-lg border border-green-300 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
@@ -566,6 +573,7 @@ ${confirmedNames.map(n => `- ${n}`).join('\n')}`;
               })}
               {users.length === 0 && <p className="text-[11px] text-zinc-500 italic">Nenhum membro cadastrado.</p>}
             </div>
+
           </div>
         )}
       </Card>

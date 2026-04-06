@@ -83,6 +83,19 @@ export const AuthProvider = ({ children }) => {
         .single();
 
       if (error) throw error;
+
+      // Se o usuário está bloqueado, força logout imediato
+      if (data?.blocked === true) {
+        console.warn('AuthContext: usuário bloqueado, forçando logout.');
+        clearAllSessions();
+        await supabase.auth.signOut();
+        if (mountedRef.current) {
+          setUser(null);
+          setProfile(null);
+        }
+        return;
+      }
+
       if (mountedRef.current) setProfile(data);
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -91,7 +104,8 @@ export const AuthProvider = ({ children }) => {
           name: 'Usuário',
           role: 'USER',
           faltas_nao_justificadas: 0,
-          inadimplente: false
+          inadimplente: false,
+          blocked: false,
         });
       }
     } finally {
@@ -240,13 +254,28 @@ export const AuthProvider = ({ children }) => {
 
     const result = await supabase.auth.signInWithPassword({ email, password });
 
-    if (!result.error) {
+    if (!result.error && result.data?.user) {
+      // Verifica se o usuário está bloqueado antes de concluir o login
+      const { data: prof } = await supabase
+        .from('profiles')
+        .select('blocked')
+        .eq('id', result.data.user.id)
+        .single();
+
+      if (prof?.blocked === true) {
+        // Desfaz o login imediatamente
+        clearAllSessions();
+        await supabase.auth.signOut();
+        return {
+          data: null,
+          error: { message: 'Acesso bloqueado pelo administrador. Entre em contato com o suporte.' }
+        };
+      }
+
       if (rememberMe) {
-        // Marca que o usuário quer ser lembrado e persiste a sessão no localStorage
         localStorage.setItem(REMEMBER_FLAG, '1');
         persistSessionToLocal();
       } else {
-        // Garante que não há flag de "lembrar"
         localStorage.removeItem(REMEMBER_FLAG);
       }
     }
