@@ -3,6 +3,66 @@ import { supabase } from '../lib/supabase';
 
 const AuthContext = createContext({});
 
+// Chave usada para persistir a sessão no localStorage quando "Lembrar usuário" está marcado
+const PERSIST_KEY = 'jantatrembo-auth';
+const REMEMBER_FLAG = 'jantatrembo-remember';
+
+/**
+ * Copia a sessão do sessionStorage para o localStorage (para "lembrar usuário").
+ * O cliente Supabase usa sessionStorage por padrão — aqui propagamos manualmente.
+ */
+function persistSessionToLocal() {
+  try {
+    const session = sessionStorage.getItem(PERSIST_KEY);
+    if (session) {
+      localStorage.setItem(PERSIST_KEY, session);
+    }
+  } catch (e) {
+    console.error('Erro ao persistir sessão:', e);
+  }
+}
+
+/**
+ * Na inicialização, se o usuário tinha "lembrar" marcado, restaura a sessão
+ * do localStorage para o sessionStorage (que é o que o cliente Supabase lê).
+ */
+function restoreSessionFromLocal() {
+  try {
+    const remembered = localStorage.getItem(REMEMBER_FLAG) === '1';
+    if (remembered) {
+      const session = localStorage.getItem(PERSIST_KEY);
+      if (session) {
+        sessionStorage.setItem(PERSIST_KEY, session);
+        return true;
+      }
+    }
+    return false;
+  } catch (e) {
+    console.error('Erro ao restaurar sessão:', e);
+    return false;
+  }
+}
+
+/**
+ * Remove a sessão de ambos os storages (logout completo).
+ */
+function clearAllSessions() {
+  try {
+    sessionStorage.removeItem(PERSIST_KEY);
+    localStorage.removeItem(PERSIST_KEY);
+    localStorage.removeItem(REMEMBER_FLAG);
+    // Limpa chaves legadas do formato sb-*
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('sb-')) localStorage.removeItem(key);
+    });
+    Object.keys(sessionStorage).forEach(key => {
+      if (key.startsWith('sb-')) sessionStorage.removeItem(key);
+    });
+  } catch (e) {
+    console.error('Erro ao limpar sessão:', e);
+  }
+}
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -13,7 +73,7 @@ export const AuthProvider = ({ children }) => {
 
   const refreshProfile = useCallback(async (userId) => {
     if (!userId || !mountedRef.current) return;
-    if (profileFetchingRef.current) return; // evita fetches paralelos
+    if (profileFetchingRef.current) return;
     profileFetchingRef.current = true;
     try {
       const { data, error } = await supabase
@@ -42,7 +102,7 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     mountedRef.current = true;
 
-    // Fallback de segurança: se nada resolver em 10s, libera o loading
+    // Fallback: libera loading em 10s caso algo falhe
     const fallbackTimer = setTimeout(() => {
       if (mountedRef.current && !initDoneRef.current) {
         console.warn('AuthContext: fallback timer triggered');
@@ -53,18 +113,8 @@ export const AuthProvider = ({ children }) => {
 
     const initializeAuth = async () => {
       try {
-        // Verifica se usuário escolheu NÃO ser lembrado
-        const noPersist = localStorage.getItem('jantatrembo-no-persist') === '1';
-        const hasActiveSession = sessionStorage.getItem('jantatrembo-session-active') === '1';
-
-        if (noPersist && !hasActiveSession) {
-          await supabase.auth.signOut({ scope: 'local' });
-          if (mountedRef.current) {
-            setUser(null);
-            setProfile(null);
-          }
-          return;
-        }
+        // Tenta restaurar sessão do localStorage se o usuário escolheu "lembrar"
+        restoreSessionFromLocal();
 
         const { data: { session }, error } = await supabase.auth.getSession();
 
@@ -79,7 +129,6 @@ export const AuthProvider = ({ children }) => {
 
         if (session?.user) {
           if (mountedRef.current) {
-            sessionStorage.setItem('jantatrembo-session-active', '1');
             setUser(session.user);
             await refreshProfile(session.user.id);
           }
@@ -113,9 +162,10 @@ export const AuthProvider = ({ children }) => {
       console.debug('AuthContext: event=', event);
 
       if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+        clearAllSessions();
         setUser(null);
         setProfile(null);
-        setLoading(false);
+        if (initDoneRef.current) setLoading(false);
         return;
       }
 
@@ -123,9 +173,11 @@ export const AuthProvider = ({ children }) => {
         const currentUser = session?.user || null;
         if (mountedRef.current) {
           if (currentUser) {
-            sessionStorage.setItem('jantatrembo-session-active', '1');
             setUser(currentUser);
-            // Só recarrega o perfil se não estiver fazendo fetch
+            // Se "lembrar" está ativo, sincroniza a sessão atualizada no localStorage
+            if (localStorage.getItem(REMEMBER_FLAG) === '1') {
+              persistSessionToLocal();
+            }
             if (!profileFetchingRef.current) {
               await refreshProfile(currentUser.id);
             }
@@ -133,10 +185,7 @@ export const AuthProvider = ({ children }) => {
             setUser(null);
             setProfile(null);
           }
-          // Só define loading=false após inicialização completa
-          if (initDoneRef.current) {
-            setLoading(false);
-          }
+          if (initDoneRef.current) setLoading(false);
         }
         return;
       }
@@ -150,30 +199,24 @@ export const AuthProvider = ({ children }) => {
         } else if (!currentUser) {
           setProfile(null);
         }
-        if (initDoneRef.current) {
-          setLoading(false);
-        }
+        if (initDoneRef.current) setLoading(false);
       }
     });
 
-    // ─── RECONEXÃO QUANDO A ABA VOLTA AO FOCO ────────────────────────────────
+    // Reconexão quando a aba volta ao foco
     const handleVisibilityChange = async () => {
       if (document.visibilityState !== 'visible' || !mountedRef.current) return;
 
       try {
-        // Tenta renovar sessão silenciosamente quando volta ao foco
         const { data: { session } } = await supabase.auth.getSession();
 
         if (!session && mountedRef.current) {
-          // Sessão expirou enquanto estava fora — força logout
           setUser(null);
           setProfile(null);
         } else if (session?.user && mountedRef.current) {
-          const currentUser = session.user;
-          setUser(currentUser);
-          // Reload silencioso do perfil para garantir dados frescos
+          setUser(session.user);
           if (!profileFetchingRef.current) {
-            await refreshProfile(currentUser.id);
+            await refreshProfile(session.user.id);
           }
         }
       } catch (err) {
@@ -191,16 +234,23 @@ export const AuthProvider = ({ children }) => {
     };
   }, [refreshProfile]);
 
-  const signIn = async (email, password, rememberMe = true) => {
-    if (!rememberMe) {
-      localStorage.setItem('jantatrembo-no-persist', '1');
-    } else {
-      localStorage.removeItem('jantatrembo-no-persist');
-    }
+  const signIn = async (email, password, rememberMe = false) => {
+    // Limpa qualquer sessão anterior primeiro
+    clearAllSessions();
+
     const result = await supabase.auth.signInWithPassword({ email, password });
+
     if (!result.error) {
-      sessionStorage.setItem('jantatrembo-session-active', '1');
+      if (rememberMe) {
+        // Marca que o usuário quer ser lembrado e persiste a sessão no localStorage
+        localStorage.setItem(REMEMBER_FLAG, '1');
+        persistSessionToLocal();
+      } else {
+        // Garante que não há flag de "lembrar"
+        localStorage.removeItem(REMEMBER_FLAG);
+      }
     }
+
     return result;
   };
 
@@ -213,8 +263,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const signOut = async () => {
-    localStorage.removeItem('jantatrembo-no-persist');
-    sessionStorage.removeItem('jantatrembo-session-active');
+    clearAllSessions();
     return supabase.auth.signOut();
   };
 

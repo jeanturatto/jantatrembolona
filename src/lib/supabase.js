@@ -3,13 +3,15 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+// Usa sessionStorage por padrão — a sessão NÃO persiste ao fechar o navegador/aba.
+// Quando o usuário marca "Lembrar usuário", o AuthContext copia a sessão para localStorage.
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: false,
     storageKey: 'jantatrembo-auth',
-    storage: window.localStorage,
+    storage: window.sessionStorage,
   },
   global: {
     fetch: (...args) => {

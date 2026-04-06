@@ -44,19 +44,16 @@ export default function Layout() {
 
   const handleLogout = async () => {
     try {
-      // Força a remoção do token local para garantir que o usuário não fique preso
-      Object.keys(localStorage).forEach(key => {
-        if (key.startsWith('sb-') && key.endsWith('-auth-token')) {
-          localStorage.removeItem(key);
-        }
-      });
-      // Executa o signout sem travar a thread se o supabase bugar o lock
-      signOut().catch(e => console.error('Supabase signOut error:', e));
+      // signOut() já limpa sessionStorage e localStorage internamente
+      await signOut();
+    } catch (e) {
+      console.error('Logout error:', e);
     } finally {
-      // Hard redirect para limpar a memória do React e forçar o login
+      // Hard redirect para limpar memória React e forçar tela de login
       window.location.href = '/login';
     }
   };
+
 
   const navItems = [
     { to: '/', label: 'Início', icon: LayoutDashboard },
