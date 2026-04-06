@@ -77,12 +77,12 @@ export const PdfPeriodoModal = ({ isOpen, onClose, onConfirm }) => {
             <div className="space-y-1">
               <label className="text-[10px] font-bold uppercase text-zinc-400">Data início</label>
               <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
-                className="w-full p-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm outline-none focus:border-zinc-900 dark:focus:border-white" />
+                className="w-full p-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-medium text-zinc-900 dark:text-white outline-none focus:border-zinc-900 dark:focus:border-white transition-all" />
             </div>
             <div className="space-y-1">
               <label className="text-[10px] font-bold uppercase text-zinc-400">Data fim</label>
               <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
-                className="w-full p-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm outline-none focus:border-zinc-900 dark:focus:border-white" />
+                className="w-full p-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-medium text-zinc-900 dark:text-white outline-none focus:border-zinc-900 dark:focus:border-white transition-all" />
             </div>
           </div>
         )}

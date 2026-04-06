@@ -58,11 +58,14 @@ export const ProfileModal = ({ isOpen, onClose, user, profile, onSave }) => {
     }
   };
 
-  const inputClass = "w-full p-2.5 bg-white border border-zinc-200 rounded-lg text-sm outline-none focus:ring-1 ring-zinc-900 dark:bg-zinc-900 dark:border-zinc-700 dark:text-white";
+  // Classes padronizadas com os demais modais
+  const inputClass = "w-full p-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:border-zinc-900 dark:focus:border-white transition-all text-sm font-medium text-zinc-900 dark:text-white";
+  const inputReadOnly = "w-full p-3 bg-zinc-100 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm text-zinc-400 dark:text-zinc-500 cursor-not-allowed";
+  const labelClass = "text-[10px] font-bold uppercase text-zinc-400";
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Meu Perfil">
-      <div className="space-y-6">
+      <div className="space-y-5">
         {/* Avatar + Name */}
         <div className="flex items-center gap-4">
           <label className="relative group cursor-pointer shrink-0">
@@ -88,20 +91,20 @@ export const ProfileModal = ({ isOpen, onClose, user, profile, onSave }) => {
         {/* Fields */}
         <div className="space-y-4">
           <div className="space-y-1">
-            <label className="text-[10px] font-bold text-zinc-400 uppercase">Display Name</label>
+            <label className={labelClass}>Display Name</label>
             <input value={name} onChange={e => setName(e.target.value)} className={inputClass} />
           </div>
           <div className="space-y-1">
-            <label className="text-[10px] font-bold text-zinc-400 uppercase">Email</label>
-            <input readOnly value={user?.email || ''} className="w-full p-2.5 bg-zinc-50 border border-zinc-100 rounded-lg text-sm text-zinc-500 cursor-not-allowed dark:bg-zinc-800 dark:border-zinc-700" />
+            <label className={labelClass}>Email</label>
+            <input readOnly value={user?.email || ''} className={inputReadOnly} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-zinc-400 uppercase">Phone</label>
+              <label className={labelClass}>Telefone</label>
               <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="(00) 00000-0000" className={inputClass} />
             </div>
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-zinc-400 uppercase">PIX</label>
+              <label className={labelClass}>PIX</label>
               <input value={pix} onChange={e => setPix(e.target.value)} placeholder="Sua chave PIX" className={inputClass} />
             </div>
           </div>
@@ -111,32 +114,29 @@ export const ProfileModal = ({ isOpen, onClose, user, profile, onSave }) => {
         <div className="grid grid-cols-3 gap-2 py-4 border-y border-zinc-100 dark:border-zinc-800">
           <div className="text-center">
             <p className="text-xl font-bold text-green-600">{stats.presencas}</p>
-            <p className="text-[10px] text-zinc-400 uppercase">Presenças</p>
+            <p className={labelClass}>Presenças</p>
           </div>
           <div className="text-center">
             <p className="text-xl font-bold text-red-500">{stats.faltas}</p>
-            <p className="text-[10px] text-zinc-400 uppercase">Faltas</p>
+            <p className={labelClass}>Faltas</p>
           </div>
           <div className="text-center">
             <p className={`text-xl font-bold ${stats.perc >= 70 ? 'text-green-600' : stats.perc >= 50 ? 'text-amber-500' : 'text-red-500'}`}>{stats.perc}%</p>
-            <p className="text-[10px] text-zinc-400 uppercase">Partic.</p>
+            <p className={labelClass}>Partic.</p>
           </div>
         </div>
 
         <div className="flex gap-3">
           <button
             onClick={onClose}
-            className="flex-1 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors p-3 rounded-xl font-bold text-sm"
+            className="flex-1 p-3 border border-zinc-200 dark:border-zinc-700 rounded-xl font-bold text-sm text-zinc-900 dark:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
           >
             Cancelar
           </button>
           <button
             disabled={uploading}
-            onClick={() => {
-              // Fecha o modal imediatamente e passa dados para o pai salvar
-              onSave?.({ phone, name, avatarUrl, pix });
-            }}
-            className="flex-1 bg-zinc-900 text-white dark:bg-white dark:text-black p-3 rounded-xl font-bold text-sm transition-transform active:scale-[0.98] disabled:opacity-50"
+            onClick={() => onSave?.({ phone, name, avatarUrl, pix })}
+            className="flex-1 p-3 bg-zinc-900 text-white dark:bg-white dark:text-black rounded-xl font-bold text-sm transition-transform active:scale-[0.98] disabled:opacity-50"
           >
             {uploading ? 'Aguarde...' : 'Salvar'}
           </button>
