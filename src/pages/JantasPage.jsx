@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Users, Utensils, Lock, Pencil, Eye, CheckCheck, XCircle, UserCog } from 'lucide-react';
 import { Card } from '../components/Card';
 import { useAuth } from '../contexts/AuthContext';
@@ -49,20 +49,16 @@ export default function JantasPage() {
   const [ausenciasNoMes, setAusenciasNoMes] = useState(0);
   const LIMITE_AUSENCIAS = 3;
 
-  const fetchJantas = async (retryOnAuthError = true) => {
+  const fetchJantas = useCallback(async () => {
+    if (!user?.id) return;
     try {
       const { data, error } = await supabase
         .from('events')
         .select('*, attendances(user_id, status)')
         .order('date', { ascending: false });
 
-      // Detecta erro de autenticação e tenta renovar sessão
       if (error) {
         console.error('Erro ao buscar jantas:', error);
-        if (retryOnAuthError && (error.code === 'PGRST301' || error.message?.includes('JWT') || error.message?.includes('token'))) {
-          await supabase.auth.refreshSession();
-          return fetchJantas(false); // Re-tenta uma vez após refresh
-        }
         setLoading(false);
         return;
       }
@@ -111,9 +107,9 @@ export default function JantasPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id]);
 
-  useEffect(() => { fetchJantas(); }, [user.id]);
+  useEffect(() => { fetchJantas(); }, [fetchJantas]);
 
   // Re-busca dados quando a aba volta ao foco
   useEffect(() => {
@@ -124,7 +120,7 @@ export default function JantasPage() {
     };
     document.addEventListener('visibilitychange', handleVisibility);
     return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, []);
+  }, [fetchJantas]);
 
   // Count current month absences
   useEffect(() => {

@@ -9,9 +9,11 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const profileFetchingRef = useRef(false);
   const mountedRef = useRef(true);
+  const initDoneRef = useRef(false);
 
   const refreshProfile = useCallback(async (userId) => {
     if (!userId || !mountedRef.current) return;
+    if (profileFetchingRef.current) return; // evita fetches paralelos
     profileFetchingRef.current = true;
     try {
       const { data, error } = await supabase
@@ -37,40 +39,19 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  // Função para garantir que a sessão está ativa e renovar se necessário
-  const ensureSession = useCallback(async () => {
-    try {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      if (error || !session) return null;
-
-      const nowSec = Math.floor(Date.now() / 1000);
-      const expiresAt = session.expires_at || 0;
-
-      // Se expira em menos de 5 minutos, renova preventivamente
-      if (expiresAt - nowSec < 300) {
-        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-        if (refreshError || !refreshData.session) {
-          console.warn('Não foi possível renovar a sessão');
-          return null;
-        }
-        return refreshData.session;
-      }
-
-      return session;
-    } catch (err) {
-      console.error('ensureSession error:', err);
-      return null;
-    }
-  }, []);
-
   useEffect(() => {
     mountedRef.current = true;
 
-    const initializeAuth = async () => {
-      const fallbackTimer = setTimeout(() => {
-        if (mountedRef.current) setLoading(false);
-      }, 8000);
+    // Fallback de segurança: se nada resolver em 10s, libera o loading
+    const fallbackTimer = setTimeout(() => {
+      if (mountedRef.current && !initDoneRef.current) {
+        console.warn('AuthContext: fallback timer triggered');
+        setLoading(false);
+        initDoneRef.current = true;
+      }
+    }, 10000);
 
+    const initializeAuth = async () => {
       try {
         // Verifica se usuário escolheu NÃO ser lembrado
         const noPersist = localStorage.getItem('jantatrembo-no-persist') === '1';
@@ -85,14 +66,22 @@ export const AuthProvider = ({ children }) => {
           return;
         }
 
-        const session = await ensureSession();
+        const { data: { session }, error } = await supabase.auth.getSession();
 
-        if (session) {
-          const currentUser = session.user;
+        if (error) {
+          console.error('AuthContext: getSession error:', error);
+          if (mountedRef.current) {
+            setUser(null);
+            setProfile(null);
+          }
+          return;
+        }
+
+        if (session?.user) {
           if (mountedRef.current) {
             sessionStorage.setItem('jantatrembo-session-active', '1');
-            setUser(currentUser);
-            await refreshProfile(currentUser.id);
+            setUser(session.user);
+            await refreshProfile(session.user.id);
           }
         } else {
           if (mountedRef.current) {
@@ -110,6 +99,7 @@ export const AuthProvider = ({ children }) => {
         if (mountedRef.current) {
           clearTimeout(fallbackTimer);
           setLoading(false);
+          initDoneRef.current = true;
         }
       }
     };
@@ -119,6 +109,8 @@ export const AuthProvider = ({ children }) => {
     // Listener de eventos de auth do Supabase
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mountedRef.current) return;
+
+      console.debug('AuthContext: event=', event);
 
       if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
         setUser(null);
@@ -133,12 +125,18 @@ export const AuthProvider = ({ children }) => {
           if (currentUser) {
             sessionStorage.setItem('jantatrembo-session-active', '1');
             setUser(currentUser);
-            await refreshProfile(currentUser.id);
+            // Só recarrega o perfil se não estiver fazendo fetch
+            if (!profileFetchingRef.current) {
+              await refreshProfile(currentUser.id);
+            }
           } else {
             setUser(null);
             setProfile(null);
           }
-          setLoading(false);
+          // Só define loading=false após inicialização completa
+          if (initDoneRef.current) {
+            setLoading(false);
+          }
         }
         return;
       }
@@ -152,45 +150,34 @@ export const AuthProvider = ({ children }) => {
         } else if (!currentUser) {
           setProfile(null);
         }
-        setLoading(false);
+        if (initDoneRef.current) {
+          setLoading(false);
+        }
       }
     });
-
-    // ─── RENOVAÇÃO PERIÓDICA DE SESSÃO ───────────────────────────────────────
-    // Roda a cada 10 minutos para garantir que o token nunca expira enquanto
-    // o usuário está ativo na página
-    const refreshInterval = setInterval(async () => {
-      if (!mountedRef.current) return;
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-
-      const nowSec = Math.floor(Date.now() / 1000);
-      const expiresAt = session.expires_at || 0;
-
-      // Renova se expira em menos de 10 minutos
-      if (expiresAt - nowSec < 600) {
-        console.log('AuthContext: renovando token preventivamente...');
-        await supabase.auth.refreshSession();
-      }
-    }, 10 * 60 * 1000); // a cada 10 minutos
 
     // ─── RECONEXÃO QUANDO A ABA VOLTA AO FOCO ────────────────────────────────
     const handleVisibilityChange = async () => {
       if (document.visibilityState !== 'visible' || !mountedRef.current) return;
 
-      // Quando o usuário volta à aba, verifica se a sessão ainda é válida
-      const session = await ensureSession();
-      if (!session && mountedRef.current) {
-        // Sessão expirou enquanto estava fora — força logout
-        setUser(null);
-        setProfile(null);
-      } else if (session && mountedRef.current) {
-        const currentUser = session.user;
-        setUser(currentUser);
-        // Reload silencioso do perfil para garantir dados frescos
-        if (currentUser && !profileFetchingRef.current) {
-          await refreshProfile(currentUser.id);
+      try {
+        // Tenta renovar sessão silenciosamente quando volta ao foco
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (!session && mountedRef.current) {
+          // Sessão expirou enquanto estava fora — força logout
+          setUser(null);
+          setProfile(null);
+        } else if (session?.user && mountedRef.current) {
+          const currentUser = session.user;
+          setUser(currentUser);
+          // Reload silencioso do perfil para garantir dados frescos
+          if (!profileFetchingRef.current) {
+            await refreshProfile(currentUser.id);
+          }
         }
+      } catch (err) {
+        console.error('AuthContext: visibility change error:', err);
       }
     };
 
@@ -198,11 +185,11 @@ export const AuthProvider = ({ children }) => {
 
     return () => {
       mountedRef.current = false;
+      clearTimeout(fallbackTimer);
       subscription.unsubscribe();
-      clearInterval(refreshInterval);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [ensureSession, refreshProfile]);
+  }, [refreshProfile]);
 
   const signIn = async (email, password, rememberMe = true) => {
     if (!rememberMe) {
@@ -234,7 +221,7 @@ export const AuthProvider = ({ children }) => {
   const isAdmin = profile?.role === 'ADMIN' || profile?.role === 'admin';
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signIn, signUp, signOut, isAdmin, refreshProfile, ensureSession }}>
+    <AuthContext.Provider value={{ user, profile, loading, signIn, signUp, signOut, isAdmin, refreshProfile }}>
       {loading ? (
         <div className="min-h-screen bg-zinc-50 dark:bg-black flex flex-col items-center justify-center gap-3">
           <div className="animate-spin h-8 w-8 border-4 border-zinc-900 border-t-transparent rounded-full dark:border-white dark:border-t-transparent"></div>

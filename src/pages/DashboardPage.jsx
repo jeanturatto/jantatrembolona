@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Calendar, Users, Percent, AlertCircle, Utensils, Lock } from 'lucide-react';
 import { Card } from '../components/Card';
 import { useAuth } from '../contexts/AuthContext';
@@ -8,7 +8,6 @@ import { JustificativaModal } from '../components/JustificativaModal';
 import { EventDetailModal } from '../components/EventDetailModal';
 
 // Regra: o prazo de confirmação encerra no DIA ANTERIOR à janta às 16:00 BRT.
-// Ex: janta dia 02/04 → prazo encerra 01/04 às 16h.
 const isEventPastDeadline = (eventDateStr) => {
   if (!eventDateStr) return false;
   const now = new Date();
@@ -16,31 +15,23 @@ const isEventPastDeadline = (eventDateStr) => {
   const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
   const brt = new Date(utcMs + brtOffset * 60000);
 
-  // Data da janta em UTC → componentes de data locais
   const eventDate = new Date(eventDateStr);
   const eventYear = eventDate.getUTCFullYear();
   const eventMonth = eventDate.getUTCMonth();
   const eventDay = eventDate.getUTCDate();
 
   // Prazo = dia anterior à janta às 16:00 BRT
-  // Construímos o prazo como Date em BRT
   const deadlineBRT = new Date(eventYear, eventMonth, eventDay - 1, 16, 0, 0, 0);
-  // deadlineBRT está em timezone LOCAL do JS, mas precisamos comparar com BRT atual
-  // Convertemos o BRT atual para um Date comparável
   const brtAsDate = new Date(
-    brt.getFullYear(),
-    brt.getMonth(),
-    brt.getDate(),
-    brt.getHours(),
-    brt.getMinutes(),
-    brt.getSeconds()
+    brt.getFullYear(), brt.getMonth(), brt.getDate(),
+    brt.getHours(), brt.getMinutes(), brt.getSeconds()
   );
 
   return brtAsDate >= deadlineBRT;
 };
 
 export default function DashboardPage() {
-  const { user, profile } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const [jantas, setJantas] = useState([]);
   const [stats, setStats] = useState({ totalJantas: 0, membros: 0, presencaMedia: '0%', inadimplentes: 0 });
   const [loading, setLoading] = useState(true);
@@ -48,16 +39,27 @@ export default function DashboardPage() {
   const [isJustModalOpen, setIsJustModalOpen] = useState(false);
   const [justEventId, setJustEventId] = useState(null);
   const [detailEvent, setDetailEvent] = useState(null);
+  const [error, setError] = useState(null);
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
+    if (!user?.id) return;
+    setError(null);
     try {
-      const [{ data: jantasData }, { count: membrosCount }, { count: inadimplentesCount }, { data: attendances }, { data: allProfiles }] = await Promise.all([
+      const [
+        { data: jantasData, error: jantasErr },
+        { count: membrosCount },
+        { count: inadimplentesCount },
+        { data: attendances },
+        { data: allProfiles }
+      ] = await Promise.all([
         supabase.from('events').select('*, attendances(user_id, status)').order('date', { ascending: false }).limit(5),
         supabase.from('profiles').select('*', { count: 'exact', head: true }),
         supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('inadimplente', true),
-        supabase.from('attendances').select('*'),
-        supabase.from('profiles').select('id, name, email')
+        supabase.from('attendances').select('*').eq('user_id', user.id),
+        supabase.from('profiles').select('id, name, email'),
       ]);
+
+      if (jantasErr) throw jantasErr;
 
       if (jantasData) {
         const profileMap = Object.fromEntries((allProfiles || []).map(p => [p.id, p.name || p.email?.split('@')[0]]));
@@ -85,8 +87,8 @@ export default function DashboardPage() {
         });
         setJantas(formattedJantas);
 
-        const userTotalExpected = attendances?.filter(a => a.user_id === user.id).length || 0;
-        const userPresentes = attendances?.filter(a => a.user_id === user.id && a.status === 'Presente').length || 0;
+        const userTotalExpected = attendances?.length || 0;
+        const userPresentes = attendances?.filter(a => a.status === 'Presente').length || 0;
         const userPerc = userTotalExpected > 0 ? Math.round((userPresentes / userTotalExpected) * 100) : 0;
 
         setStats({
@@ -98,18 +100,18 @@ export default function DashboardPage() {
       }
     } catch (error) {
       console.error('Error fetching dashboard:', error);
+      setError('Erro ao carregar dados. Tente recarregar a página.');
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    if (user?.id) fetchDashboardData();
   }, [user?.id]);
 
-  // Re-busca dados quando a aba volta ao foco (resolve perda de dados por inatividade)
   useEffect(() => {
-    if (!user?.id) return;
+    fetchDashboardData();
+  }, [fetchDashboardData]);
+
+  // Re-busca dados quando a aba volta ao foco
+  useEffect(() => {
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
         fetchDashboardData();
@@ -117,21 +119,20 @@ export default function DashboardPage() {
     };
     document.addEventListener('visibilitychange', handleVisibility);
     return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, [user?.id]);
+  }, [fetchDashboardData]);
 
   // Auto-mark past-deadline on today's open janta
   const autoMarkedRef = React.useRef(false);
   useEffect(() => {
-    let isSubscribed = true;
     const autoMarkDeadline = async () => {
-      if (autoMarkedRef.current) return;
+      if (autoMarkedRef.current || !user?.id) return;
       const proximaAberta = jantas.find(j => j.status === 'Aberto' && !j.userStatus);
       if (!proximaAberta) return;
       if (!isEventPastDeadline(proximaAberta.rawDate)) return;
-      
+
       autoMarkedRef.current = true;
       const userName = profile?.name || user?.email?.split('@')[0] || 'Usuário';
-      
+
       setJantas(prev => prev.map(j => j.id === proximaAberta.id ? { ...j, userStatus: 'Falta Justificada' } : j));
 
       try {
@@ -141,14 +142,13 @@ export default function DashboardPage() {
           status: 'Falta Justificada',
           justificativa: `${userName} não confirmou dentro do horário limite (16:00 do dia anterior)`
         }, { onConflict: 'event_id,user_id' });
-        
+
         if (error) throw error;
       } catch (err) {
-        console.error("Erro ao fechar janta fora do prazo", err);
+        console.error('Erro ao fechar janta fora do prazo', err);
       }
     };
     if (jantas.length > 0 && profile) autoMarkDeadline();
-    return () => { isSubscribed = false; };
   }, [jantas, profile, user?.id]);
 
   const handleAttendance = async (eventId, statusParam, justificativa = null) => {
@@ -192,6 +192,18 @@ export default function DashboardPage() {
 
   if (loading) return <div className="p-8 text-center text-zinc-500 animate-pulse">Carregando painel...</div>;
 
+  if (error) return (
+    <div className="p-8 text-center flex flex-col items-center gap-4">
+      <p className="text-red-500 font-bold">{error}</p>
+      <button
+        onClick={fetchDashboardData}
+        className="px-4 py-2 bg-zinc-900 text-white rounded-xl font-bold text-sm hover:opacity-90"
+      >
+        Tentar novamente
+      </button>
+    </div>
+  );
+
   return (
     <div className="space-y-6 animate-in fade-in">
       <header>
@@ -219,7 +231,7 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* Próxima Janta — card inteiro clicável */}
+      {/* Próxima Janta */}
       <section>
         <Card
           className={`${proximaJanta ? 'cursor-pointer hover:shadow-md' : ''} transition-all bg-zinc-50 border-dashed border-zinc-300 dark:bg-zinc-800/50`}
@@ -227,7 +239,6 @@ export default function DashboardPage() {
         >
           {proximaJanta ? (
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-              {/* Info — não precisa de onClick próprio pois o Card inteiro já abre */}
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-bold text-zinc-400 uppercase mb-1">Próxima Janta</p>
                 <h3 className="text-lg md:text-xl font-bold text-zinc-900 dark:text-white capitalize truncate">{proximaJanta.name}</h3>
@@ -241,7 +252,6 @@ export default function DashboardPage() {
                 )}
               </div>
 
-              {/* Botões de ação — stopPropagation para não abrir o modal ao clicar */}
               <div
                 className="flex flex-wrap gap-2 w-full md:w-auto"
                 onClick={e => e.stopPropagation()}
