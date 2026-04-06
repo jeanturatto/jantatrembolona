@@ -91,11 +91,11 @@ export const ProfileModal = ({ isOpen, onClose, user, profile, onSave }) => {
         {/* Fields */}
         <div className="space-y-4">
           <div className="space-y-1">
-            <label className={labelClass}>Display Name</label>
+            <label className={labelClass}>Nome</label>
             <input value={name} onChange={e => setName(e.target.value)} className={inputClass} />
           </div>
           <div className="space-y-1">
-            <label className={labelClass}>Email</label>
+            <label className={labelClass}>E-mail</label>
             <input readOnly value={user?.email || ''} className={inputReadOnly} />
           </div>
           <div className="grid grid-cols-2 gap-3">

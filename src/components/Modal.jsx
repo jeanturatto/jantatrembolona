@@ -24,7 +24,10 @@ export const Modal = ({ isOpen, onClose, title, children }) => {
       >
         <div className="flex items-center justify-between p-6 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
           <h2 className="text-xl font-semibold text-zinc-900 dark:text-white">{title}</h2>
-          <button onClick={onClose} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors">
+          <button
+            onClick={onClose}
+            className="p-2 text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors"
+          >
             <X size={20} />
           </button>
         </div>

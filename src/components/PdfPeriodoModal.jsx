@@ -97,7 +97,7 @@ export const PdfPeriodoModal = ({ isOpen, onClose, onConfirm }) => {
         </div>
 
         <div className="flex gap-3">
-          <button onClick={onClose} className="flex-1 p-3 border border-zinc-200 dark:border-zinc-700 rounded-xl font-bold text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
+          <button onClick={onClose} className="flex-1 p-3 border border-zinc-200 dark:border-zinc-700 rounded-xl font-bold text-sm text-zinc-900 dark:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
             Cancelar
           </button>
           <button onClick={handleConfirm}

@@ -94,12 +94,12 @@ export const AdminUserModal = ({ isOpen, onClose, targetUser, onSuccess, initial
       {tab === 'Dados' ? (
         <div className="space-y-4">
           <div className="space-y-1">
-            <label className={labelClass}>Display Name</label>
+            <label className={labelClass}>Nome</label>
             <input value={name} onChange={e => setName(e.target.value)} className={inputClass} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label className={labelClass}>Phone</label>
+              <label className={labelClass}>Telefone</label>
               <input value={phone} onChange={e => setPhone(e.target.value)} className={inputClass} />
             </div>
             <div className="space-y-1">
@@ -110,7 +110,7 @@ export const AdminUserModal = ({ isOpen, onClose, targetUser, onSuccess, initial
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label className={labelClass}>Role</label>
+              <label className={labelClass}>Função</label>
               <select value={role} onChange={e => setRole(e.target.value)} className={inputClass}>
                 <option value="USER">USER</option>
                 <option value="ADMIN">ADMIN</option>
@@ -147,7 +147,7 @@ export const AdminUserModal = ({ isOpen, onClose, targetUser, onSuccess, initial
           </div>
 
           <div className="flex gap-3 pt-2">
-            <button onClick={onClose} className="flex-1 p-3 border border-zinc-200 dark:border-zinc-700 rounded-xl font-bold text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
+            <button onClick={onClose} className="flex-1 p-3 border border-zinc-200 dark:border-zinc-700 rounded-xl font-bold text-sm text-zinc-900 dark:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
               Cancelar
             </button>
             <button
