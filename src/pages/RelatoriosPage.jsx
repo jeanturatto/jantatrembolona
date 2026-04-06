@@ -253,14 +253,14 @@ export default function RelatoriosPage() {
 
         {/* Printable area */}
         <div ref={printRef} className="overflow-x-auto -mx-4 md:mx-0">
-          <table className="w-full text-left text-sm" style={{minWidth: '520px'}}>
+          <table className="w-full text-left text-sm">
             <thead className="text-zinc-400 font-bold border-b border-zinc-100 dark:border-zinc-800 text-[11px] uppercase tracking-wider">
               <tr>
                 <th className="pb-3 pr-4">#</th>
                 <th className="pb-3 pr-4">Membro</th>
-                <th className="pb-3 text-center pr-3">✅ Pres.</th>
-                <th className="pb-3 text-center pr-3">🟡 Justif.</th>
-                <th className="pb-3 text-center pr-3">❌ Não Vou</th>
+                <th className="pb-3 text-center pr-3 hidden md:table-cell">✅ Pres.</th>
+                <th className="pb-3 text-center pr-3 hidden md:table-cell">🟡 Justif.</th>
+                <th className="pb-3 text-center pr-3 hidden md:table-cell">❌ Não Vou</th>
                 <th className="pb-3 text-center pr-3">%</th>
                 <th className="pb-3 text-right">Status</th>
               </tr>
@@ -276,25 +276,25 @@ export default function RelatoriosPage() {
                         avatar_url: m.avatar_url, role: m.role,
                         inadimplente: m.inadimplente, phone: m.phone, pix: m.pix
                       })}>
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center font-bold text-xs text-zinc-600 overflow-hidden shrink-0">
+                      <div className="flex items-center gap-2 md:gap-3">
+                        <div className="w-7 h-7 md:w-9 md:h-9 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center font-bold text-xs text-zinc-600 overflow-hidden shrink-0">
                           {m.avatar_url
                             ? <img src={m.avatar_url} alt={m.name} className="w-full h-full object-cover" />
                             : (m.name || m.email || 'U').charAt(0).toUpperCase()
                           }
                         </div>
-                        <div>
-                          <p className="font-bold text-zinc-900 dark:text-white capitalize group-hover:underline">{m.name}</p>
-                          <p className="text-[10px] text-zinc-400">{m.email}</p>
+                        <div className="min-w-0">
+                          <p className="font-bold text-zinc-900 dark:text-white capitalize group-hover:underline text-xs md:text-sm truncate max-w-[100px] md:max-w-none">{m.name}</p>
+                          <p className="text-[10px] text-zinc-400 hidden md:block">{m.email}</p>
                           {m.allTimeJust >= 5 && (
-                            <p className="text-[9px] font-bold text-orange-500">{m.allTimeJust} faltas justif. total</p>
+                            <p className="text-[9px] font-bold text-orange-500 hidden md:block">{m.allTimeJust} faltas justif. total</p>
                           )}
                         </div>
                       </div>
                     </td>
-                    <td className="py-3 text-center font-bold text-green-600">{m.presentes}</td>
-                    <td className="py-3 text-center font-bold text-amber-600">{m.justificadas}</td>
-                    <td className="py-3 text-center font-bold text-red-500">
+                    <td className="py-3 text-center font-bold text-green-600 hidden md:table-cell">{m.presentes}</td>
+                    <td className="py-3 text-center font-bold text-amber-600 hidden md:table-cell">{m.justificadas}</td>
+                    <td className="py-3 text-center font-bold text-red-500 hidden md:table-cell">
                       {m.naoVouCount}
                       {m.naoVouCount >= 3 && <span className="text-[9px] ml-1 bg-red-100 text-red-600 px-1 rounded">LIMITE</span>}
                     </td>
