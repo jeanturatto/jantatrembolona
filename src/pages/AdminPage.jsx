@@ -179,6 +179,24 @@ ${confirmedNames.map(n => `- ${n}`).join('\n')}`;
     }
   };
 
+  const handleDeleteUser = async (userId, userName) => {
+    if (userId === currentUser?.id) {
+      alert('Você não pode deletar sua própria conta.');
+      return;
+    }
+    if (!confirm(`⚠️ ATENÇÃO: Isso irá apagar permanentemente o usuário "${userName}" e todos os seus registros de presença. Esta ação não pode ser desfeita. Confirmar?`)) return;
+    try {
+      const { error } = await supabase.functions.invoke('delete-user', {
+        body: { userId },
+      });
+      if (error) throw error;
+      fetchUsers();
+    } catch (err) {
+      console.error('Erro ao deletar usuário:', err);
+      alert('Erro ao deletar usuário: ' + (err?.message || 'Erro desconhecido'));
+    }
+  };
+
   const handleAddEmail = async (e) => {
     e.preventDefault();
     if (!newEmail) return;
@@ -343,6 +361,15 @@ ${confirmedNames.map(n => `- ${n}`).join('\n')}`;
                     {u.inadimplente ? <XCircle size={12}/> : <CheckCircle size={12}/>}
                     {u.inadimplente ? 'INADIMPLENTE' : 'REGULAR'}
                   </button>
+
+                  {u.id !== currentUser?.id && (
+                    <button
+                      onClick={() => handleDeleteUser(u.id, u.name || u.email)}
+                      className="flex items-center gap-1 text-[10px] font-bold px-3 py-1.5 rounded-lg border border-red-200 dark:border-red-900/40 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                    >
+                      <Trash2 size={12} /> Apagar
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

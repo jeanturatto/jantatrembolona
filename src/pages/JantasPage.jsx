@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Users, Utensils, Lock, Pencil, Eye, CheckCheck, XCircle, UserCog } from 'lucide-react';
+import { Plus, Users, Utensils, Lock, Pencil, Eye, CheckCheck, XCircle, UserCog, Trash2 } from 'lucide-react';
 import { Card } from '../components/Card';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -217,6 +217,21 @@ export default function JantasPage() {
     finally { setActionLoading(null); }
   };
 
+  const handleDeleteJanta = async (eventId, eventName) => {
+    if (!confirm(`⚠️ ATENÇÃO: Isso irá apagar permanentemente a janta "${eventName}" e todos os registros de presença vinculados. Esta ação não pode ser desfeita. Confirmar?`)) return;
+    setActionLoading(eventId);
+    try {
+      const { error } = await supabase.from('events').delete().eq('id', eventId);
+      if (error) throw error;
+      await fetchJantas();
+    } catch (err) {
+      alert('Erro ao apagar janta: ' + (err.message || 'Erro desconhecido.'));
+      console.error(err);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const canEdit = (janta) => isAdmin;
 
   // Tabs: Canceladas only for ADMIN
@@ -337,6 +352,14 @@ export default function JantasPage() {
                     <button onClick={() => handleCancelar(janta.id)} disabled={actionLoading === janta.id}
                       className="flex items-center gap-1 text-[10px] font-bold px-2.5 py-1.5 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors">
                       <XCircle size={12} /> Cancelar
+                    </button>
+                  )}
+
+                  {/* Admin: Apagar (permanente — todos os status) */}
+                  {isAdmin && (
+                    <button onClick={() => handleDeleteJanta(janta.id, janta.name)} disabled={actionLoading === janta.id}
+                      className="flex items-center gap-1 text-[10px] font-bold px-2.5 py-1.5 rounded-lg border border-red-300 bg-red-50 dark:bg-red-900/10 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors">
+                      <Trash2 size={12} /> Apagar
                     </button>
                   )}
                 </div>
