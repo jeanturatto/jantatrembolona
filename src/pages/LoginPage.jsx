@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Utensils } from 'lucide-react';
+import { Utensils, Ban } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { Navigate, useNavigate } from 'react-router-dom';
+import { Modal } from '../components/Modal';
 
 const translateError = (errorMsg) => {
   if (errorMsg.includes('Invalid login credentials')) return 'E-mail ou senha incorretos.';
@@ -26,6 +27,7 @@ export default function LoginPage() {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isBlockedModalOpen, setIsBlockedModalOpen] = useState(false);
   
   const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
@@ -43,7 +45,11 @@ export default function LoginPage() {
     if (isLogin) {
       const { error } = await signIn(email, password, rememberMe);
       if (error) {
-         setError(translateError(error.message));
+         if (error.message?.includes('Acesso bloqueado')) {
+           setIsBlockedModalOpen(true);
+         } else {
+           setError(translateError(error.message));
+         }
          setIsLoading(false);
       } else {
          navigate('/');
@@ -212,6 +218,23 @@ export default function LoginPage() {
           </button>
         </p>
       </div>
+
+      <Modal isOpen={isBlockedModalOpen} onClose={() => setIsBlockedModalOpen(false)} title="Usuário Bloqueado">
+        <div className="flex flex-col items-center text-center p-4">
+          <div className="w-16 h-16 bg-red-100 dark:bg-red-500/20 text-red-500 rounded-full flex items-center justify-center mb-4">
+            <Ban size={32} />
+          </div>
+          <p className="text-zinc-600 dark:text-zinc-400 font-medium text-sm mb-6">
+            Usuário Bloqueado - Entre em contato com o Presidente do Clube
+          </p>
+          <button
+            onClick={() => setIsBlockedModalOpen(false)}
+            className="w-full p-3 bg-zinc-900 text-white dark:bg-white dark:text-black rounded-xl font-bold text-sm hover:opacity-90 transition-opacity"
+          >
+            Entendido
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 }
