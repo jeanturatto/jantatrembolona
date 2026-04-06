@@ -416,7 +416,7 @@ export default function JantasPage() {
 
       {/* Modals */}
       <CreateEventModal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} onSuccess={fetchJantas} />
-      <EditEventModal isOpen={!!editEvent} onClose={() => setEditEvent(null)} onSuccess={fetchJantas} event={editEvent} />
+      <EditEventModal isOpen={!!editEvent} onClose={() => setEditEvent(null)} onSuccess={fetchJantas} event={editEvent} isResponsibleOnly={!isAdmin} />
       <EventDetailModal
         isOpen={!!detailEvent}
         onClose={() => setDetailEvent(null)}
@@ -425,6 +425,7 @@ export default function JantasPage() {
         onJustificativa={handleJustificado}
         actionLoading={actionLoading}
         pastDeadline={detailEvent ? isEventPastDeadline(detailEvent.rawDate) : false}
+        onEditClick={setEditEvent}
       />
       <AdminAttendanceModal isOpen={!!attendanceEvent} onClose={() => setAttendanceEvent(null)} event={attendanceEvent} onSuccess={fetchJantas} />
       <JustificativaModal

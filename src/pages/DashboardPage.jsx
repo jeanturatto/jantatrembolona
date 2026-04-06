@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase';
 import { Link } from 'react-router-dom';
 import { JustificativaModal } from '../components/JustificativaModal';
 import { EventDetailModal } from '../components/EventDetailModal';
+import { EditEventModal } from '../components/EditEventModal';
 
 // Regra: o prazo de confirmação encerra no DIA ANTERIOR à janta às 16:00 BRT.
 const isEventPastDeadline = (eventDateStr) => {
@@ -39,6 +40,7 @@ export default function DashboardPage() {
   const [isJustModalOpen, setIsJustModalOpen] = useState(false);
   const [justEventId, setJustEventId] = useState(null);
   const [detailEvent, setDetailEvent] = useState(null);
+  const [editEvent, setEditEvent] = useState(null);
   const [error, setError] = useState(null);
 
   const fetchDashboardData = useCallback(async () => {
@@ -352,6 +354,15 @@ export default function DashboardPage() {
         onJustificativa={handleJustificado}
         actionLoading={actionLoading}
         pastDeadline={detailEvent ? isEventPastDeadline(detailEvent.rawDate) : false}
+        onEditClick={setEditEvent}
+      />
+
+      <EditEventModal
+        isOpen={!!editEvent}
+        onClose={() => setEditEvent(null)}
+        onSuccess={fetchDashboardData}
+        event={editEvent}
+        isResponsibleOnly={true}
       />
     </div>
   );

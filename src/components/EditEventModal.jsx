@@ -3,7 +3,7 @@ import { Modal } from './Modal';
 import { supabase } from '../lib/supabase';
 import { MapPin } from 'lucide-react';
 
-export const EditEventModal = ({ isOpen, onClose, onSuccess, event }) => {
+export const EditEventModal = ({ isOpen, onClose, onSuccess, event, isResponsibleOnly = false }) => {
   const [name, setName] = useState('');
   const [date, setDate] = useState('');
   const [location, setLocation] = useState('');
@@ -30,6 +30,7 @@ export const EditEventModal = ({ isOpen, onClose, onSuccess, event }) => {
   }, [isOpen, event]);
 
   const toggleResponsible = (userId) => {
+    if (isResponsibleOnly) return;
     setSelectedResponsibles(prev =>
       prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]
     );
@@ -87,13 +88,14 @@ export const EditEventModal = ({ isOpen, onClose, onSuccess, event }) => {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <label className="text-xs font-bold uppercase text-zinc-400">Data</label>
+            <label className="text-xs font-bold uppercase text-zinc-400">Data {isResponsibleOnly && "(Apenas Admin)"}</label>
             <input
               type="date"
               required
+              disabled={isResponsibleOnly}
               value={date}
               onChange={e => setDate(e.target.value)}
-              className="w-full p-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:border-zinc-900 dark:focus:border-white transition-all text-sm font-medium text-zinc-900 dark:text-white"
+              className={`w-full p-3 bg-zinc-50 dark:bg-zinc-800 border ${isResponsibleOnly ? 'border-zinc-100 dark:border-zinc-800 opacity-60 cursor-not-allowed text-zinc-500' : 'border-zinc-200 dark:border-zinc-700 focus:border-zinc-900 dark:focus:border-white'} rounded-xl outline-none transition-all text-sm font-medium text-zinc-900 dark:text-white`}
             />
           </div>
           <div className="space-y-2">
@@ -109,8 +111,8 @@ export const EditEventModal = ({ isOpen, onClose, onSuccess, event }) => {
         </div>
 
         <div className="space-y-2">
-          <label className="text-xs font-bold uppercase text-zinc-400">Cozinheiros (Responsáveis)</label>
-          <div className="max-h-48 overflow-y-auto space-y-2 p-1 border border-zinc-100 dark:border-zinc-800 rounded-xl">
+          <label className="text-xs font-bold uppercase text-zinc-400">Cozinheiros (Responsáveis) {isResponsibleOnly && "(Apenas Admin)"}</label>
+          <div className={`max-h-48 overflow-y-auto space-y-2 p-1 border border-zinc-100 dark:border-zinc-800 rounded-xl ${isResponsibleOnly ? 'opacity-70 grayscale-[0.3]' : ''}`}>
             {users.map(u => {
               const uName = u.name || u.email.split('@')[0];
               const uAvatar = u.avatar_url;
@@ -119,9 +121,9 @@ export const EditEventModal = ({ isOpen, onClose, onSuccess, event }) => {
                 <div
                   key={u.id}
                   onClick={() => toggleResponsible(u.id)}
-                  className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors ${
-                    isSelected ? 'bg-zinc-100 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-600' : 'hover:bg-zinc-50 dark:hover:bg-zinc-800/50 border border-transparent'
-                  }`}
+                  className={`flex items-center gap-3 p-2 rounded-lg transition-colors ${
+                    isSelected ? 'bg-zinc-100 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-600' : 'border border-transparent'
+                  } ${isResponsibleOnly ? 'cursor-default' : 'cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
                 >
                   <div className="w-8 h-8 bg-zinc-200 dark:bg-zinc-700 rounded-full flex items-center justify-center font-bold text-zinc-500 overflow-hidden shrink-0 text-xs">
                     {uAvatar ? (

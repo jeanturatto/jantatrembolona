@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { MapPin, Calendar, Users, Utensils, CheckCircle2, XCircle, AlertCircle, Lock } from 'lucide-react';
+import { MapPin, Calendar, Users, Utensils, CheckCircle2, XCircle, AlertCircle, Lock, Edit3 } from 'lucide-react';
 import { Modal } from './Modal';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 
 /**
  * Props:
@@ -21,8 +22,12 @@ export const EventDetailModal = ({
   onJustificativa,
   actionLoading,
   pastDeadline,
+  onEditClick,
 }) => {
+  const { user } = useAuth();
   const [responsaveis, setResponsaveis] = useState([]);
+
+  const isUserResponsible = event?.responsibles?.includes(user?.id);
 
   useEffect(() => {
     if (!isOpen || !event?.responsibles?.length) {
@@ -160,12 +165,23 @@ export const EventDetailModal = ({
           </div>
         )}
 
-        <button
-          onClick={onClose}
-          className="w-full p-3 border border-zinc-200 dark:border-zinc-700 rounded-xl font-bold text-sm text-zinc-900 dark:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
-        >
-          Fechar
-        </button>
+        {/* Ações do Modal Footer */}
+        <div className="flex flex-col sm:flex-row gap-3 pt-2">
+          {isOpen_ && isUserResponsible && onEditClick && (
+            <button
+              onClick={() => { onEditClick(event); onClose(); }}
+              className="flex-1 p-3 border-2 border-blue-200 dark:border-blue-900/50 bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 rounded-xl font-bold text-sm hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors flex items-center justify-center gap-2"
+            >
+              <Edit3 size={16} /> Editar Informações
+            </button>
+          )}
+          <button
+            onClick={onClose}
+            className="flex-1 p-3 border border-zinc-200 dark:border-zinc-700 rounded-xl font-bold text-sm text-zinc-900 dark:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+          >
+            Fechar
+          </button>
+        </div>
       </div>
     </Modal>
   );
