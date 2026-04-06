@@ -32,6 +32,14 @@ export default function LoginPage() {
   const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
 
+  useEffect(() => {
+    // Se o AuthContext forçou logout por bloqueio, exibe o modal
+    if (localStorage.getItem('show_blocked_modal') === 'true') {
+      setIsBlockedModalOpen(true);
+      localStorage.removeItem('show_blocked_modal');
+    }
+  }, []);
+
   if (user) {
     return <Navigate to="/" replace />;
   }
@@ -219,19 +227,23 @@ export default function LoginPage() {
         </p>
       </div>
 
-      <Modal isOpen={isBlockedModalOpen} onClose={() => setIsBlockedModalOpen(false)} title="Usuário Bloqueado">
+      {/* Usamos a classe customizada no close/overlay se precisasse, mas sem onClose ele não fecha no click/ESC */}
+      <Modal isOpen={isBlockedModalOpen} title="Acesso Revogado">
         <div className="flex flex-col items-center text-center p-4">
           <div className="w-16 h-16 bg-red-100 dark:bg-red-500/20 text-red-500 rounded-full flex items-center justify-center mb-4">
             <Ban size={32} />
           </div>
-          <p className="text-zinc-600 dark:text-zinc-400 font-medium text-sm mb-6">
+          <p className="text-zinc-600 dark:text-zinc-400 font-medium text-sm mb-2">
             Usuário Bloqueado - Entre em contato com o Presidente do Clube
+          </p>
+          <p className="text-xs text-zinc-500 mt-2">
+            Seu acesso foi revogado pelo administrador e todas as suas sessões foram encerradas.
           </p>
           <button
             onClick={() => setIsBlockedModalOpen(false)}
-            className="w-full p-3 bg-zinc-900 text-white dark:bg-white dark:text-black rounded-xl font-bold text-sm hover:opacity-90 transition-opacity"
+            className="w-full mt-6 p-3 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white rounded-xl font-bold text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
           >
-            Entendido
+            Voltar para Login
           </button>
         </div>
       </Modal>

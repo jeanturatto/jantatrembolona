@@ -87,6 +87,8 @@ export const AuthProvider = ({ children }) => {
       // Se o usuário está bloqueado, força logout imediato
       if (data?.blocked === true) {
         console.warn('AuthContext: usuário bloqueado, forçando logout.');
+        // Indica para a tela de login mostrar o modal de bloqueado
+        localStorage.setItem('show_blocked_modal', 'true');
         clearAllSessions();
         await supabase.auth.signOut();
         if (mountedRef.current) {
