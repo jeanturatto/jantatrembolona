@@ -38,6 +38,7 @@ export default function LoginPage() {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [pix, setPix] = useState('');
+  const [dataNascimento, setDataNascimento] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
@@ -87,7 +88,7 @@ export default function LoginPage() {
         navigate('/');
       }
     } else {
-      const { error } = await signUp(email, password, { name, phone, pix });
+      const { error } = await signUp(email, password, { name, phone, pix, data_nascimento: dataNascimento || null });
       setIsLoading(false);
       if (error) {
         setError(translateError(error.message));
@@ -161,6 +162,16 @@ export default function LoginPage() {
                       required placeholder="Chave PIX" autoComplete="off" className={inputCls} />
                   </Field>
                 </div>
+                <Field label="Data de Nascimento">
+                  <input
+                    type="date"
+                    value={dataNascimento}
+                    onChange={e => setDataNascimento(e.target.value)}
+                    required
+                    max={new Date(new Date().setFullYear(new Date().getFullYear() - 1)).toISOString().split('T')[0]}
+                    className={inputCls}
+                  />
+                </Field>
               </>
             )}
 

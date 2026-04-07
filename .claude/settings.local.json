@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx claude-code-templates@latest --skill creative-design/frontend-design)",
+      "Bash(npm run:*)",
+      "WebSearch",
+      "WebFetch(domain:dribbble.com)",
+      "WebFetch(domain:www.designmonks.co)",
+      "WebFetch(domain:phenomenonstudio.com)",
+      "WebFetch(domain:www.designrush.com)",
+      "WebFetch(domain:cdn.dribbble.com)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173)",
+      "WebFetch(domain:in.pinterest.com)",
+      "WebFetch(domain:savee.com)",
+      "WebFetch(domain:awsmd.com)",
+      "WebFetch(domain:www.figma.com)",
+      "WebFetch(domain:es.pinterest.com)",
+      "WebFetch(domain:www.instagram.com)",
+      "WebFetch(domain:layers.to)",
+      "WebFetch(domain:www.behance.net)",
+      "WebFetch(domain:colorswall.com)",
+      "WebFetch(domain:muz.li)",
+      "WebFetch(domain:medium.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:stakent.com)",
+      "WebFetch(domain:www.testmuai.com)",
+      "WebFetch(domain:uxpilot.ai)",
+      "WebFetch(domain:www.wendyzhou.se)",
+      "WebFetch(domain:www.navbar.gallery)",
+      "WebFetch(domain:adminlte.io)"
+    ]
+  }
+}

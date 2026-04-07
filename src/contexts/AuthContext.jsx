@@ -3,63 +3,84 @@ import { supabase } from '../lib/supabase';
 
 const AuthContext = createContext({});
 
-// Chave usada para persistir a sessão no localStorage quando "Lembrar usuário" está marcado
-const PERSIST_KEY = 'jantatrembo-auth';
+// Flag que indica se o usuário escolheu "Lembrar usuário"
 const REMEMBER_FLAG = 'jantatrembo-remember';
+// Chave onde o Supabase armazena a sessão (definida em supabase.js)
+const SESSION_KEY = 'jantatrembo-auth';
 
 /**
- * Copia a sessão do sessionStorage para o localStorage (para "lembrar usuário").
- * O cliente Supabase usa sessionStorage por padrão — aqui propagamos manualmente.
+ * Migra sessão do sessionStorage (formato antigo) para o localStorage (novo),
+ * para que usuários existentes não sejam deslogados na atualização.
  */
-function persistSessionToLocal() {
+function migrateSessionFromStorage() {
   try {
-    const session = sessionStorage.getItem(PERSIST_KEY);
-    if (session) {
-      localStorage.setItem(PERSIST_KEY, session);
-    }
-  } catch (e) {
-    console.error('Erro ao persistir sessão:', e);
-  }
-}
-
-/**
- * Na inicialização, se o usuário tinha "lembrar" marcado, restaura a sessão
- * do localStorage para o sessionStorage (que é o que o cliente Supabase lê).
- */
-function restoreSessionFromLocal() {
-  try {
-    const remembered = localStorage.getItem(REMEMBER_FLAG) === '1';
-    if (remembered) {
-      const session = localStorage.getItem(PERSIST_KEY);
-      if (session) {
-        sessionStorage.setItem(PERSIST_KEY, session);
-        return true;
+    const SESSION_KEY_LOCAL = 'jantatrembo-auth';
+    const existingLocal = localStorage.getItem(SESSION_KEY_LOCAL);
+    if (!existingLocal) {
+      const fromSession = sessionStorage.getItem(SESSION_KEY_LOCAL);
+      if (fromSession) {
+        localStorage.setItem(SESSION_KEY_LOCAL, fromSession);
+        console.info('AuthContext: sessão migrada do sessionStorage para localStorage.');
       }
     }
-    return false;
-  } catch (e) {
-    console.error('Erro ao restaurar sessão:', e);
-    return false;
-  }
+  } catch (_) {}
 }
 
+// Executa migração imediatamente ao carregar o módulo
+migrateSessionFromStorage();
+
 /**
- * Remove a sessão de ambos os storages (logout completo).
+ * Remove a sessão completamente (logout).
+ * O Supabase usa localStorage agora, então basta limpar de lá.
  */
 function clearAllSessions() {
   try {
-    sessionStorage.removeItem(PERSIST_KEY);
-    localStorage.removeItem(PERSIST_KEY);
+    localStorage.removeItem(SESSION_KEY);
     localStorage.removeItem(REMEMBER_FLAG);
     // Limpa chaves legadas do formato sb-*
     Object.keys(localStorage).forEach(key => {
       if (key.startsWith('sb-')) localStorage.removeItem(key);
     });
-    Object.keys(sessionStorage).forEach(key => {
-      if (key.startsWith('sb-')) sessionStorage.removeItem(key);
-    });
+    // Limpa sessionStorage legado caso exista
+    try {
+      sessionStorage.removeItem(SESSION_KEY);
+      Object.keys(sessionStorage).forEach(key => {
+        if (key.startsWith('sb-')) sessionStorage.removeItem(key);
+      });
+    } catch (_) {}
   } catch (e) {
     console.error('Erro ao limpar sessão:', e);
+  }
+}
+
+/**
+ * Quando "lembrar" NÃO está ativo, registra um timestamp de expiração
+ * curto (8h) para simular uma sessão de aba.
+ * Na próxima abertura sem "lembrar", se a sessão expirou, ela é removida.
+ */
+function applySessionExpiry(rememberMe) {
+  try {
+    if (rememberMe) {
+      localStorage.removeItem('jantatrembo-session-expiry');
+    } else {
+      // Sessão expira em 8 horas
+      const expiry = Date.now() + 8 * 60 * 60 * 1000;
+      localStorage.setItem('jantatrembo-session-expiry', String(expiry));
+    }
+  } catch (_) {}
+}
+
+/**
+ * Verifica se a sessão expirou (para usuários sem "lembrar").
+ * Retorna true se deve apagar a sessão.
+ */
+function isSessionExpired() {
+  try {
+    const expiry = localStorage.getItem('jantatrembo-session-expiry');
+    if (!expiry) return false; // sem expiração = lembrar ativo
+    return Date.now() > Number(expiry);
+  } catch (_) {
+    return false;
   }
 }
 
@@ -87,7 +108,6 @@ export const AuthProvider = ({ children }) => {
       // Se o usuário está bloqueado, força logout imediato
       if (data?.blocked === true) {
         console.warn('AuthContext: usuário bloqueado, forçando logout.');
-        // Indica para a tela de login mostrar o modal de bloqueado
         localStorage.setItem('show_blocked_modal', 'true');
         clearAllSessions();
         await supabase.auth.signOut();
@@ -129,8 +149,16 @@ export const AuthProvider = ({ children }) => {
 
     const initializeAuth = async () => {
       try {
-        // Tenta restaurar sessão do localStorage se o usuário escolheu "lembrar"
-        restoreSessionFromLocal();
+        // Se a sessão sem "lembrar" expirou, limpa e não inicializa
+        if (isSessionExpired()) {
+          console.info('AuthContext: sessão expirada (sem lembrar), limpando.');
+          clearAllSessions();
+          if (mountedRef.current) {
+            setUser(null);
+            setProfile(null);
+          }
+          return;
+        }
 
         const { data: { session }, error } = await supabase.auth.getSession();
 
@@ -190,10 +218,6 @@ export const AuthProvider = ({ children }) => {
         if (mountedRef.current) {
           if (currentUser) {
             setUser(currentUser);
-            // Se "lembrar" está ativo, sincroniza a sessão atualizada no localStorage
-            if (localStorage.getItem(REMEMBER_FLAG) === '1') {
-              persistSessionToLocal();
-            }
             if (!profileFetchingRef.current) {
               await refreshProfile(currentUser.id);
             }
@@ -223,6 +247,17 @@ export const AuthProvider = ({ children }) => {
     const handleVisibilityChange = async () => {
       if (document.visibilityState !== 'visible' || !mountedRef.current) return;
 
+      // Verifica expiração ao voltar ao foco
+      if (isSessionExpired()) {
+        clearAllSessions();
+        await supabase.auth.signOut();
+        if (mountedRef.current) {
+          setUser(null);
+          setProfile(null);
+        }
+        return;
+      }
+
       try {
         const { data: { session } } = await supabase.auth.getSession();
 
@@ -251,8 +286,12 @@ export const AuthProvider = ({ children }) => {
   }, [refreshProfile]);
 
   const signIn = async (email, password, rememberMe = false) => {
-    // Limpa qualquer sessão anterior primeiro
-    clearAllSessions();
+    // Persiste a preferência de "lembrar" ANTES do login
+    if (rememberMe) {
+      localStorage.setItem(REMEMBER_FLAG, '1');
+    } else {
+      localStorage.removeItem(REMEMBER_FLAG);
+    }
 
     const result = await supabase.auth.signInWithPassword({ email, password });
 
@@ -265,7 +304,6 @@ export const AuthProvider = ({ children }) => {
         .single();
 
       if (prof?.blocked === true) {
-        // Desfaz o login imediatamente
         clearAllSessions();
         await supabase.auth.signOut();
         return {
@@ -274,12 +312,8 @@ export const AuthProvider = ({ children }) => {
         };
       }
 
-      if (rememberMe) {
-        localStorage.setItem(REMEMBER_FLAG, '1');
-        persistSessionToLocal();
-      } else {
-        localStorage.removeItem(REMEMBER_FLAG);
-      }
+      // Aplica expiração baseada em "lembrar usuário"
+      applySessionExpiry(rememberMe);
     }
 
     return result;

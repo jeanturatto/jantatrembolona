@@ -265,9 +265,22 @@ export default function DashboardPage() {
   const proximaJanta = jantas.find(j => j.status === 'Aberto');
   const pastDeadline = proximaJanta ? isEventPastDeadline(proximaJanta.rawDate) : false;
   const btnBase = 'flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border text-xs font-bold transition-all active:scale-[0.97]';
-  const btnPresente = proximaJanta?.userStatus === 'Presente' ? 'bg-green-500 border-green-500 text-white' : 'border-green-400 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20';
-  const btnJust = proximaJanta?.userStatus === 'Falta Justificada' ? 'bg-amber-500 border-amber-500 text-white' : 'border-amber-400 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20';
-  const btnAusente = proximaJanta?.userStatus === 'Ausente' ? 'bg-zinc-500 border-zinc-500 text-white' : 'border-zinc-300 dark:border-zinc-600 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800';
+  const userStatusJanta = proximaJanta?.userStatus;
+
+  const getDashBtnStyle = (thisStatus) => {
+    if (!userStatusJanta) {
+      if (thisStatus === 'Presente')          return 'border-green-400 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20';
+      if (thisStatus === 'Falta Justificada') return 'border-amber-400 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20';
+      return 'border-zinc-300 dark:border-zinc-600 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800';
+    }
+    if (userStatusJanta === thisStatus) {
+      if (thisStatus === 'Presente')          return 'bg-green-500 border-green-500 text-white shadow-sm shadow-green-200 dark:shadow-green-900/30';
+      if (thisStatus === 'Falta Justificada') return 'bg-amber-500 border-amber-500 text-white shadow-sm shadow-amber-200 dark:shadow-amber-900/30';
+      return 'bg-zinc-500 border-zinc-500 text-white';
+    }
+    return 'border-zinc-100 dark:border-zinc-800 text-zinc-300 dark:text-zinc-600 opacity-40 cursor-not-allowed';
+  };
+  const isDashBtnDisabled = (thisStatus) => actionLoading || (!!userStatusJanta && userStatusJanta !== thisStatus);
 
   if (loading) return <div className="p-8 text-center text-zinc-400 dark:text-[#5E5853] animate-pulse text-sm">Carregando painel...</div>;
 
@@ -382,13 +395,13 @@ export default function DashboardPage() {
                     </div>
                   ) : (
                     <div className="flex gap-2 w-full md:w-auto">
-                      <button disabled={actionLoading} onClick={() => handleAttendance(proximaJanta.id, 'Presente')} className={`${btnBase} ${btnPresente}`}>
+                      <button disabled={isDashBtnDisabled('Presente')} onClick={() => handleAttendance(proximaJanta.id, 'Presente')} className={`${btnBase} ${getDashBtnStyle('Presente')}`}>
                         <CheckCircle2 size={14} /> Presente
                       </button>
-                      <button disabled={actionLoading} onClick={() => handleJustificado(proximaJanta.id)} className={`${btnBase} ${btnJust}`}>
+                      <button disabled={isDashBtnDisabled('Falta Justificada')} onClick={() => handleJustificado(proximaJanta.id)} className={`${btnBase} ${getDashBtnStyle('Falta Justificada')}`}>
                         <AlertCircle size={14} /> Justificada
                       </button>
-                      <button disabled={actionLoading} onClick={() => handleAttendance(proximaJanta.id, 'Ausente')} className={`${btnBase} ${btnAusente}`}>
+                      <button disabled={isDashBtnDisabled('Ausente')} onClick={() => handleAttendance(proximaJanta.id, 'Ausente')} className={`${btnBase} ${getDashBtnStyle('Ausente')}`}>
                         <XCircle size={14} /> Não Vou
                       </button>
                     </div>

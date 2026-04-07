@@ -50,15 +50,26 @@ export const EventDetailModal = ({
   const userStatus = event.userStatus;
 
   const btnBase = 'flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border text-xs font-bold transition-all active:scale-[0.97]';
-  const btnPresente = userStatus === 'Presente'
-    ? 'bg-green-500 border-green-500 text-white'
-    : 'border-green-400 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20';
-  const btnJust = userStatus === 'Falta Justificada'
-    ? 'bg-amber-500 border-amber-500 text-white'
-    : 'border-amber-400 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20';
-  const btnAusente = userStatus === 'Ausente'
-    ? 'bg-zinc-500 border-zinc-500 text-white'
-    : 'border-zinc-300 dark:border-zinc-600 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800';
+
+  // Helpers para estilo dos botões de presença
+  const getBtnStyle = (thisStatus) => {
+    if (!userStatus) {
+      // Nenhum status: todos ativos
+      if (thisStatus === 'Presente')       return 'border-green-400 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20';
+      if (thisStatus === 'Falta Justificada') return 'border-amber-400 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20';
+      return 'border-zinc-300 dark:border-zinc-600 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800';
+    }
+    if (userStatus === thisStatus) {
+      // Este é o selecionado: destaque forte
+      if (thisStatus === 'Presente')       return 'bg-green-500 border-green-500 text-white shadow-sm shadow-green-200 dark:shadow-green-900/30';
+      if (thisStatus === 'Falta Justificada') return 'bg-amber-500 border-amber-500 text-white shadow-sm shadow-amber-200 dark:shadow-amber-900/30';
+      return 'bg-zinc-500 border-zinc-500 text-white';
+    }
+    // Outro: apagado e sem função
+    return 'border-zinc-100 dark:border-zinc-800 text-zinc-300 dark:text-zinc-600 opacity-40 cursor-not-allowed';
+  };
+
+  const isBtnDisabled = (thisStatus) => !!actionLoading || (!!userStatus && userStatus !== thisStatus);
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={event.name || 'Detalhes da Janta'}>
@@ -140,23 +151,23 @@ export const EventDetailModal = ({
             ) : (
               <div className="flex gap-2">
                 <button
-                  disabled={!!actionLoading}
+                  disabled={isBtnDisabled('Presente')}
                   onClick={() => { onAttendance(event.id, 'Presente'); onClose(); }}
-                  className={`${btnBase} ${btnPresente}`}
+                  className={`${btnBase} ${getBtnStyle('Presente')}`}
                 >
                   <CheckCircle2 size={14} /> Presente
                 </button>
                 <button
-                  disabled={!!actionLoading}
+                  disabled={isBtnDisabled('Falta Justificada')}
                   onClick={() => { onJustificativa?.(event.id); onClose(); }}
-                  className={`${btnBase} ${btnJust}`}
+                  className={`${btnBase} ${getBtnStyle('Falta Justificada')}`}
                 >
                   <AlertCircle size={14} /> Justificada
                 </button>
                 <button
-                  disabled={!!actionLoading}
+                  disabled={isBtnDisabled('Ausente')}
                   onClick={() => { onAttendance(event.id, 'Ausente'); onClose(); }}
-                  className={`${btnBase} ${btnAusente}`}
+                  className={`${btnBase} ${getBtnStyle('Ausente')}`}
                 >
                   <XCircle size={14} /> Não Vou
                 </button>
