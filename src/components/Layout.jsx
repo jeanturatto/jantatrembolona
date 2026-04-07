@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  Calendar, 
-  BarChart3, 
-  User, 
-  Settings, 
+import {
+  LayoutDashboard,
+  Calendar,
+  BarChart3,
+  User,
+  Settings,
   LogOut,
   Utensils,
   ChevronRight,
   Menu,
-  X
+  X,
+  Bell,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { ProfileModal } from './ProfileModal';
@@ -43,20 +44,12 @@ export default function Layout() {
   }, []);
 
   const handleLogout = async () => {
-    try {
-      // signOut() já limpa sessionStorage e localStorage internamente
-      await signOut();
-    } catch (e) {
-      console.error('Logout error:', e);
-    } finally {
-      // Hard redirect para limpar memória React e forçar tela de login
-      window.location.href = '/login';
-    }
+    try { await signOut(); } catch (e) { console.error('Logout error:', e); }
+    finally { window.location.href = '/login'; }
   };
 
-
   const navItems = [
-    { to: '/', label: 'Início', icon: LayoutDashboard },
+    { to: '/', label: 'Início',     icon: LayoutDashboard, end: true },
     { to: '/jantas', label: 'Jantas', icon: Calendar },
     ...(isAdmin ? [{ to: '/relatorios', label: 'Relatórios', icon: BarChart3 }] : []),
   ];
@@ -67,7 +60,6 @@ export default function Layout() {
   };
 
   const handleProfileSave = async ({ phone, name, avatarUrl, pix }) => {
-    // Fecha o modal imediatamente para UX fluida
     setIsProfileOpen(false);
     try {
       const { error } = await supabase
@@ -75,173 +67,188 @@ export default function Layout() {
         .update({ telefone: phone, name, pix, avatar_url: avatarUrl })
         .eq('id', user.id);
       if (error) throw error;
-
-      await supabase.auth.updateUser({
-        data: { name, phone, pix }
-      });
-
+      await supabase.auth.updateUser({ data: { name, phone, pix } });
       await refreshProfile(user.id);
-      showToast('Perfil atualizado com sucesso! ✓');
+      showToast('Perfil atualizado com sucesso!');
     } catch (err) {
-      showToast('Erro ao atualizar perfil: ' + err.message, 'error');
-      console.error(err);
+      showToast('Erro ao atualizar: ' + err.message, 'error');
     }
   };
 
+  const userInitial = profile?.name?.charAt(0) || user?.email?.charAt(0) || 'U';
+
   return (
-    <div className="flex min-h-screen bg-zinc-50/50 dark:bg-black text-zinc-900 dark:text-zinc-100 font-sans overflow-x-hidden">
-      
-      {/* MOBILE HEADER */}
-      <header className="md:hidden fixed top-0 w-full h-16 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between px-4 z-40">
-        <div className="flex items-center gap-2">
+    <div className="flex min-h-screen bg-[#f2f1fb] dark:bg-[#090914] text-zinc-900 dark:text-white font-sans overflow-x-hidden">
+
+      {/* ── MOBILE HEADER ── */}
+      <header className="md:hidden fixed top-0 inset-x-0 h-16 z-40 flex items-center justify-between px-4
+        bg-white/80 dark:bg-[#0b0b1e]/90 backdrop-blur-xl
+        border-b border-[#2842B5]/08 dark:border-white/[0.06]">
+        <div className="flex items-center gap-2.5">
           {appConfig.iconUrl ? (
-            <div className="w-8 h-8 rounded-lg overflow-hidden shrink-0">
-              <img src={appConfig.iconUrl} alt="App Icon" className="w-full h-full object-cover" />
+            <div className="w-8 h-8 rounded-xl overflow-hidden shrink-0">
+              <img src={appConfig.iconUrl} alt="icon" className="w-full h-full object-cover" />
             </div>
           ) : (
-            <div className="w-8 h-8 bg-zinc-900 dark:bg-white rounded-lg flex items-center justify-center shrink-0">
-              <Utensils className="text-white dark:text-black" size={16} />
+            <div className="w-8 h-8 bg-[#2842B5] rounded-xl flex items-center justify-center shrink-0">
+              <Utensils className="text-white" size={15} />
             </div>
           )}
-          <h1 className="font-bold text-sm text-zinc-900 dark:text-white truncate">{appConfig.name}</h1>
+          <span className="font-semibold text-sm text-zinc-900 dark:text-white tracking-tight truncate">{appConfig.name}</span>
         </div>
-        <button  
-          className="p-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
+        <button
           onClick={() => setIsMobileMenuOpen(true)}
+          className="p-2 text-zinc-400 dark:text-[#5a5a80] hover:text-zinc-900 dark:hover:text-white transition-colors rounded-lg hover:bg-zinc-100 dark:hover:bg-white/[0.05]"
         >
-          <Menu size={24} />
+          <Menu size={20} />
         </button>
       </header>
 
-      {/* MOBILE OVERLAY */}
+      {/* ── MOBILE OVERLAY ── */}
       {isMobileMenuOpen && (
-        <div 
-          className="md:hidden fixed inset-0 bg-black/50 z-40 backdrop-blur-sm animate-in fade-in"
+        <div
+          className="md:hidden fixed inset-0 bg-black/70 dark:bg-black/80 backdrop-blur-md z-40 animate-in fade-in"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
 
+      {/* ── SIDEBAR ── */}
       <aside className={`
-        fixed h-full w-72 md:w-64 bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800 flex flex-col z-50 transition-transform duration-300
-        ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} 
+        fixed h-full w-72 md:w-60 z-50 flex flex-col
+        bg-white dark:bg-[#0b0b1e]
+        border-r border-[#2842B5]/08 dark:border-white/[0.06]
+        transition-transform duration-300
+        ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
         md:translate-x-0
       `}>
-        <div className="p-6 flex items-center justify-between md:justify-start gap-3">
+
+        {/* Logo */}
+        <div className="px-5 h-16 flex items-center justify-between border-b border-[#2842B5]/08 dark:border-white/[0.06] shrink-0">
           <div className="flex items-center gap-3 overflow-hidden">
             {appConfig.iconUrl ? (
-              <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 shadow-sm">
-                <img src={appConfig.iconUrl} alt="App Logo" className="w-full h-full object-cover" />
+              <div className="w-9 h-9 rounded-xl overflow-hidden shrink-0">
+                <img src={appConfig.iconUrl} alt="logo" className="w-full h-full object-cover" />
               </div>
             ) : (
-              <div className="w-10 h-10 bg-zinc-900 dark:bg-white rounded-xl flex items-center justify-center shrink-0">
-                <Utensils className="text-white dark:text-black" size={20} />
+              <div className="w-9 h-9 bg-[#2842B5] rounded-xl flex items-center justify-center shrink-0 shadow-lg shadow-[#2842B5]/30">
+                <Utensils className="text-white" size={17} />
               </div>
             )}
             <div className="overflow-hidden">
-              <h2 className="font-bold text-sm leading-tight text-zinc-900 dark:text-white truncate">{appConfig.name}</h2>
-              <p className="text-[10px] text-zinc-500 uppercase tracking-tighter truncate">{appConfig.subtitle}</p>
+              <p className="font-bold text-sm text-zinc-900 dark:text-white tracking-tight truncate leading-tight">{appConfig.name}</p>
+              <p className="text-[10px] text-[#2842B5] dark:text-[#B8ABCF]/60 uppercase tracking-widest truncate">{appConfig.subtitle}</p>
             </div>
           </div>
-          
-          <button 
-            className="md:hidden p-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
+          <button
+            className="md:hidden p-1.5 text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors rounded-lg"
             onClick={() => setIsMobileMenuOpen(false)}
           >
-            <X size={24} />
+            <X size={18} />
           </button>
         </div>
 
-        <nav className="flex-1 px-4 space-y-1 mt-4 md:mt-2">
+        {/* Nav */}
+        <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+          <p className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-widest text-zinc-300 dark:text-[#3a3a60]">Menu</p>
+
           {navItems.map(item => (
             <NavLink
               key={item.to}
               to={item.to}
+              end={item.end}
               onClick={() => setIsMobileMenuOpen(false)}
-              className={({ isActive }) => 
-                `w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
                   isActive
-                  ? "bg-zinc-900 text-white shadow-lg shadow-zinc-200 dark:shadow-none dark:bg-white dark:text-black" 
-                  : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                  ? 'bg-[#2842B5] text-white nav-active-glow'
+                  : 'text-zinc-500 dark:text-[#5a5a80] hover:bg-[#2842B5]/[0.08] dark:hover:bg-white/[0.04] hover:text-[#2842B5] dark:hover:text-[#B8ABCF]'
                 }`
               }
             >
-              <item.icon size={18} />
+              <item.icon size={17} strokeWidth={isActive => isActive ? 2.2 : 1.8} />
               {item.label}
             </NavLink>
           ))}
+
           <button
-            onClick={() => {
-               setIsMobileMenuOpen(false);
-               setIsProfileOpen(true);
-            }}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all font-sans text-left"
+            onClick={() => { setIsMobileMenuOpen(false); setIsProfileOpen(true); }}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-zinc-500 dark:text-[#5a5a80] hover:bg-[#2842B5]/[0.08] dark:hover:bg-white/[0.04] hover:text-[#2842B5] dark:hover:text-[#B8ABCF] transition-all text-left"
           >
-            <User size={18} /> Perfil
+            <User size={17} />
+            Perfil
           </button>
+
+          {isAdmin && (
+            <>
+              <p className="px-3 pt-4 mb-2 text-[10px] font-semibold uppercase tracking-widest text-zinc-300 dark:text-[#3a3a60]">Admin</p>
+              <NavLink
+                to="/admin"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                    isActive
+                    ? 'bg-[#2842B5] text-white nav-active-glow'
+                    : 'text-zinc-500 dark:text-[#5a5a80] hover:bg-[#2842B5]/[0.08] dark:hover:bg-white/[0.04] hover:text-[#2842B5] dark:hover:text-[#B8ABCF]'
+                  }`
+                }
+              >
+                <Settings size={17} />
+                Painel Admin
+              </NavLink>
+            </>
+          )}
         </nav>
 
-        {/* ADMIN & USER SECTION */}
-        <div className="p-4 border-t border-zinc-100 dark:border-zinc-800">
-          {isAdmin && (
-            <NavLink 
-              to="/admin"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className={({ isActive }) => 
-                `w-full p-3 mb-4 rounded-xl border border-dashed flex items-center justify-between transition-colors ${
-                  isActive 
-                  ? 'bg-zinc-900 text-white border-zinc-900' 
-                  : 'border-zinc-300 text-zinc-400 hover:border-zinc-900 dark:border-zinc-700 dark:hover:border-white'
-                }`
-              }
-            >
-              <div className="flex items-center gap-2">
-                <Settings size={16} />
-                <span className="text-xs font-bold uppercase">Painel Admin</span>
-              </div>
-              <ChevronRight size={14} />
-            </NavLink>
-          )}
-          
-          <div className="flex items-center gap-3 px-2">
-            <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-xs font-bold shrink-0 text-zinc-900 dark:text-white uppercase overflow-hidden">
+        {/* User footer */}
+        <div className="px-3 py-4 border-t border-[#2842B5]/08 dark:border-white/[0.06] shrink-0">
+          <div className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-[#2842B5]/[0.05] dark:hover:bg-white/[0.03] transition-colors">
+            <div className="w-8 h-8 rounded-full bg-[#2842B5]/15 dark:bg-[#2842B5]/20 flex items-center justify-center text-xs font-bold shrink-0 text-[#2842B5] dark:text-[#B8ABCF] uppercase overflow-hidden ring-2 ring-[#2842B5]/20">
               {profile?.avatar_url
                 ? <img src={profile.avatar_url} alt="avatar" className="w-full h-full object-cover" />
-                : (profile?.name?.charAt(0) || user?.email?.charAt(0) || 'U')
+                : userInitial
               }
             </div>
-            <div className="flex-1 overflow-hidden">
-              <p className="text-xs font-bold truncate text-zinc-900 dark:text-white capitalize">{profile?.name || user?.email?.split('@')[0] || 'Usuário'}</p>
-              <p className="text-[10px] text-zinc-500 truncate">{user?.email}</p>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold truncate text-zinc-900 dark:text-white capitalize">
+                {profile?.name || user?.email?.split('@')[0] || 'Usuário'}
+              </p>
+              <p className="text-[10px] text-zinc-400 dark:text-[#5a5a80] truncate">{user?.email}</p>
             </div>
-            <button onClick={handleLogout} className="p-2 -mr-2 text-zinc-400 hover:text-red-500 transition-colors">
-              <LogOut size={16} />
+            <button
+              onClick={handleLogout}
+              className="p-1.5 text-zinc-300 dark:text-[#3a3a60] hover:text-red-500 dark:hover:text-red-400 transition-colors rounded-lg shrink-0"
+              title="Sair"
+            >
+              <LogOut size={15} />
             </button>
           </div>
         </div>
       </aside>
 
-      {/* MAIN CONTENT */}
-      <main className="flex-1 md:ml-64 pt-16 md:pt-0 p-4 md:p-10 w-full min-w-0 overflow-x-hidden">
-        <div className="max-w-5xl mx-auto h-full flex flex-col">
-          <Outlet />
+      {/* ── MAIN CONTENT ── */}
+      <main className="flex-1 md:ml-60 pt-16 md:pt-0 min-w-0 overflow-x-hidden">
+        <div className="dark:dot-grid min-h-screen">
+          <div className="max-w-5xl mx-auto px-4 md:px-8 py-6 md:py-8 h-full flex flex-col">
+            <Outlet />
+          </div>
         </div>
       </main>
 
-      {/* Toast notification */}
+      {/* ── TOAST ── */}
       {toast && (
-        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] px-5 py-3 rounded-2xl text-sm font-bold shadow-xl animate-in fade-in ${
+        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] px-5 py-3 rounded-xl text-sm font-semibold shadow-2xl animate-in fade-in tracking-tight border ${
           toast.type === 'error'
-            ? 'bg-red-500 text-white'
-            : 'bg-zinc-900 dark:bg-white text-white dark:text-black'
+            ? 'bg-red-600 text-white border-red-500/30'
+            : 'bg-[#2842B5] text-white border-[#2842B5]/50 shadow-[#2842B5]/25'
         }`}>
           {toast.msg}
         </div>
       )}
 
-      <ProfileModal 
-        isOpen={isProfileOpen} 
-        onClose={() => setIsProfileOpen(false)} 
-        user={user} 
+      <ProfileModal
+        isOpen={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
+        user={user}
         profile={profile}
         onSave={handleProfileSave}
       />

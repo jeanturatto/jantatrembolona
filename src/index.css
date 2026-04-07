@@ -1,64 +1,156 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 
-/* Custom animations for the app */
+@theme {
+  --font-sans: 'Space Grotesk', system-ui, sans-serif;
+}
+
+/* ─── Stakent color tokens ─── */
+:root {
+  --bg-primary: #f2f1fb;
+  --bg-secondary: #ffffff;
+  --bg-sidebar: #ffffff;
+  --border-color: rgba(40, 66, 181, 0.09);
+  --accent: #2842B5;
+  --accent-hover: #3452c5;
+  --accent-muted: rgba(40, 66, 181, 0.12);
+  --lavender: #6a5acd;
+  --text-primary: #0c0b1e;
+  --text-secondary: #6060a0;
+  --text-muted: #a0a0c0;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-primary: #090914;
+    --bg-secondary: #0b0b1e;
+    --bg-sidebar: #0b0b1e;
+    --border-color: rgba(255, 255, 255, 0.07);
+    --accent: #2842B5;
+    --accent-hover: #3452c5;
+    --accent-muted: rgba(40, 66, 181, 0.20);
+    --text-primary: #ffffff;
+    --text-secondary: #B8ABCF;
+    --text-muted: #5a5a80;
+  }
+}
+.dark {
+  --bg-primary: #090914;
+  --bg-secondary: #0b0b1e;
+  --bg-sidebar: #0b0b1e;
+  --border-color: rgba(255, 255, 255, 0.07);
+  --accent: #2842B5;
+  --accent-hover: #3452c5;
+  --accent-muted: rgba(40, 66, 181, 0.20);
+  --text-primary: #ffffff;
+  --text-secondary: #B8ABCF;
+  --text-muted: #5a5a80;
+}
+
+/* ─── Glassmorphism card ─── */
+.glass-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(40, 66, 181, 0.09);
+}
+
+.dark .glass-card,
+@media (prefers-color-scheme: dark) {
+  .glass-card {
+    background: rgba(255, 255, 255, 0.04);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+  }
+}
+
+/* ─── Login background ─── */
+.stakent-login-bg {
+  background: var(--bg-primary);
+  position: relative;
+}
+
+.stakent-login-bg::before {
+  content: '';
+  position: fixed;
+  top: 35%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 700px;
+  height: 500px;
+  background: radial-gradient(ellipse, rgba(40, 66, 181, 0.18) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.stakent-login-bg::after {
+  content: '';
+  position: fixed;
+  bottom: 20%;
+  right: 20%;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(ellipse, rgba(184, 171, 207, 0.10) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ─── Sidebar glow on active ─── */
+.nav-active-glow {
+  box-shadow: 0 4px 20px rgba(40, 66, 181, 0.35);
+}
+
+/* ─── Dot grid pattern for main bg ─── */
+.dot-grid {
+  background-image: radial-gradient(circle, rgba(255,255,255,0.035) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+/* ─── Animations ─── */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  to   { opacity: 1; transform: translateY(0); }
 }
-
 @keyframes slideInFromBottom {
   from { opacity: 0; transform: translateY(16px); }
-  to { opacity: 1; transform: translateY(0); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
 }
 
-/* Utility classes for animations */
-.animate-in {
-  animation-duration: 500ms;
-  animation-fill-mode: both;
-}
+.animate-in    { animation-duration: 400ms; animation-fill-mode: both; }
+.fade-in       { animation-name: fadeIn; }
+.zoom-in-95    { animation-name: scaleIn; }
+.slide-in-from-bottom-4 { animation-name: slideInFromBottom; }
+.duration-200  { animation-duration: 200ms; }
 
-.fade-in {
-  animation-name: fadeIn;
-}
+/* Stagger */
+.stagger > *:nth-child(1) { animation-delay: 0ms;   animation: fadeIn 400ms both; }
+.stagger > *:nth-child(2) { animation-delay: 60ms;  animation: fadeIn 400ms 60ms both; }
+.stagger > *:nth-child(3) { animation-delay: 120ms; animation: fadeIn 400ms 120ms both; }
+.stagger > *:nth-child(4) { animation-delay: 180ms; animation: fadeIn 400ms 180ms both; }
 
-.slide-in-from-bottom-4 {
-  animation-name: slideInFromBottom;
-}
-
-/* Smooth scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar       { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: #d4d4d8;
-  border-radius: 3px;
+  background: rgba(40, 66, 181, 0.25);
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(40, 66, 181, 0.45);
 }
 
-.dark ::-webkit-scrollbar-thumb {
-  background: #3f3f46;
-}
-
-/* Inter font */
-
+/* ─── Base ─── */
 html, body {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
   max-width: 100vw;
 }
-
-/* Mobile: garantir que elementos não ultrapassem a tela */
-* {
-  box-sizing: border-box;
-}
-
-img, video, table {
-  max-width: 100%;
-}
+* { box-sizing: border-box; }
+img, video, table { max-width: 100%; }

@@ -2,7 +2,13 @@ import React from 'react';
 
 export const Card = ({ children, className = "", onClick }) => (
   <div
-    className={`bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 ${className}`}
+    className={`
+      bg-white/90 dark:bg-white/[0.04]
+      backdrop-blur-xl dark:backdrop-blur-2xl
+      border border-[#2842B5]/[0.09] dark:border-white/[0.07]
+      rounded-2xl p-5
+      ${className}
+    `}
     onClick={onClick}
     role={onClick ? 'button' : undefined}
     tabIndex={onClick ? 0 : undefined}

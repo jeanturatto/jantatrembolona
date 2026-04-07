@@ -13,7 +13,14 @@ import AdminPage from './pages/AdminPage';
 const ProtectedRoute = ({ children, requireAdmin = false }) => {
   const { user, isAdmin, loading } = useAuth();
   
-  if (loading) return <div className="min-h-screen bg-zinc-50 dark:bg-black flex items-center justify-center font-bold text-zinc-500">Carregando...</div>;
+  if (loading) return (
+    <div className="min-h-screen bg-[#f2f1fb] dark:bg-[#090914] flex items-center justify-center">
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-10 h-10 bg-[#2842B5] rounded-xl flex items-center justify-center opacity-80 animate-pulse" />
+        <span className="text-[11px] font-medium text-zinc-400 dark:text-[#5a5a80] tracking-widest uppercase">Carregando...</span>
+      </div>
+    </div>
+  );
   if (!user) return <Navigate to="/login" replace />;
   if (requireAdmin && !isAdmin) return <Navigate to="/" replace />;
   
