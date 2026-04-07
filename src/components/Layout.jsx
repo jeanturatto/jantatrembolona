@@ -59,7 +59,7 @@ export default function Layout() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  const handleProfileSave = async ({ phone, name, avatarUrl, pix, dataNascimento }) => {
+  const handleProfileSave = async ({ phone, name, avatarUrl, pix, dataNascimento, newPassword }) => {
     setIsProfileOpen(false);
     try {
       const { error } = await supabase
@@ -67,11 +67,19 @@ export default function Layout() {
         .update({ telefone: phone, name, pix, avatar_url: avatarUrl, data_nascimento: dataNascimento || null })
         .eq('id', user.id);
       if (error) throw error;
-      await supabase.auth.updateUser({ data: { name, phone, pix } });
+      
+      const updateData = { data: { name, phone, pix } };
+      if (newPassword && newPassword.length >= 6) {
+        updateData.password = newPassword;
+      }
+      
+      const { error: authError } = await supabase.auth.updateUser(updateData);
+      if (authError) throw authError;
+
       await refreshProfile(user.id);
-      showToast('Perfil atualizado com sucesso!');
+      showToast(newPassword ? 'Perfil e senha atualizados!' : 'Perfil atualizado com sucesso!');
     } catch (err) {
-      showToast('Erro ao atualizar: ' + err.message, 'error');
+      showToast('Erro ao atualizar: ' + (err?.message || JSON.stringify(err)), 'error');
     }
   };
 

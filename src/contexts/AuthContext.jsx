@@ -259,6 +259,8 @@ export const AuthProvider = ({ children }) => {
       }
 
       try {
+        // Force an active network refresh to break dormant token locks
+        await supabase.auth.refreshSession();
         const { data: { session } } = await supabase.auth.getSession();
 
         if (!session && mountedRef.current) {
@@ -288,9 +290,10 @@ export const AuthProvider = ({ children }) => {
         return;
       }
       try {
+        await supabase.auth.refreshSession();
         await supabase.auth.getSession();
       } catch (e) {
-        console.warn('AuthContext: heartbeat getSession error:', e);
+        console.warn('AuthContext: heartbeat refresh error:', e);
       }
     }, 5 * 60 * 1000);
 

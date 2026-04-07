@@ -26,8 +26,11 @@ export default function ForcePasswordChange() {
     setError('');
     
     try {
+      // Força um destravamento de sessão para evitar o bug de 'silent hang' no Promise
+      await supabase.auth.refreshSession();
+      
       // 1. Atualizar a senha no Supabase Auth
-      const { error: updateError } = await supabase.auth.updateUser({ password });
+      const { data, error: updateError } = await supabase.auth.updateUser({ password });
       if (updateError) throw updateError;
 
       // 2. Remover a flag must_change_password do profile
@@ -39,14 +42,14 @@ export default function ForcePasswordChange() {
       if (profileError) throw profileError;
 
       setSuccess('Senha alterada com sucesso! Redirecionando...');
-      
-      // 3. Atualizar o profile no contexto para liberar o acesso
-      setTimeout(() => {
-        refreshProfile(user.id);
-      }, 1500);
+      setTimeout(async () => {
+        await refreshProfile(user.id);
+      }, 1000);
 
     } catch (err) {
-      setError('Erro ao alterar senha: ' + err.message);
+      console.error('Password reset error:', err);
+      // Supabase errors sometimes don't have .message natively in all nested instances
+      setError('Erro ao alterar senha: ' + (err?.message || JSON.stringify(err)));
       setLoading(false);
     }
   };
