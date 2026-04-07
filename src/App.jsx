@@ -8,10 +8,11 @@ import DashboardPage from './pages/DashboardPage';
 import JantasPage from './pages/JantasPage';
 import RelatoriosPage from './pages/RelatoriosPage';
 import AdminPage from './pages/AdminPage';
+import ForcePasswordChange from './components/ForcePasswordChange';
 
 // Protected Route Wrapper
 const ProtectedRoute = ({ children, requireAdmin = false }) => {
-  const { user, isAdmin, loading } = useAuth();
+  const { user, isAdmin, loading, profile } = useAuth();
   
   if (loading) return (
     <div className="min-h-screen bg-[#f2f1fb] dark:bg-[#090914] flex items-center justify-center">
@@ -22,6 +23,7 @@ const ProtectedRoute = ({ children, requireAdmin = false }) => {
     </div>
   );
   if (!user) return <Navigate to="/login" replace />;
+  if (profile?.must_change_password) return <ForcePasswordChange />;
   if (requireAdmin && !isAdmin) return <Navigate to="/" replace />;
   
   return children;

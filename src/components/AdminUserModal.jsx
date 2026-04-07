@@ -53,16 +53,14 @@ export const AdminUserModal = ({ isOpen, onClose, targetUser, onSuccess, initial
       const { error: updateError } = await supabase.from('profiles').update({ name, telefone: phone, pix, role, inadimplente }).eq('id', targetUser.id);
       if (updateError) throw updateError;
 
-      // If new password set, mark must_change_password and use send reset email
+      // Se a senha foi preenchida, altera pelo RPC (evita enviar apenas email e não mudar fisicamente)
       if (newPassword && newPassword.length >= 6) {
-        // Admin sets password via Supabase Auth admin API (requires service role - use reset email instead)
-        const { error: passError } = await supabase.from('profiles').update({ must_change_password: true }).eq('id', targetUser.id);
-        if (passError) throw passError;
-        // Send password reset email as secure alternative
-        await supabase.auth.resetPasswordForEmail(targetUser.email, {
-          redirectTo: `${window.location.origin}/reset-password`
+        const { error: passError } = await supabase.rpc('admin_update_user_password', {
+          user_id: targetUser.id,
+          new_password: newPassword
         });
-        alert(`Perfil atualizado! Um email de redefinição de senha foi enviado para ${targetUser.email}.`);
+        if (passError) throw passError;
+        alert('Perfil e senha atualizados com sucesso!');
       } else {
         alert('Perfil atualizado com sucesso!');
       }

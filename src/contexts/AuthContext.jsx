@@ -277,9 +277,27 @@ export const AuthProvider = ({ children }) => {
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
+    // Heartbeat: renova a sessão periodicamente (a cada 5 min) para evitar deadlocks de inatividade
+    const heartbeatTimer = setInterval(async () => {
+      if (!mountedRef.current) return;
+      if (isSessionExpired()) {
+        clearAllSessions();
+        await supabase.auth.signOut();
+        setUser(null);
+        setProfile(null);
+        return;
+      }
+      try {
+        await supabase.auth.getSession();
+      } catch (e) {
+        console.warn('AuthContext: heartbeat getSession error:', e);
+      }
+    }, 5 * 60 * 1000);
+
     return () => {
       mountedRef.current = false;
       clearTimeout(fallbackTimer);
+      clearInterval(heartbeatTimer);
       subscription.unsubscribe();
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };

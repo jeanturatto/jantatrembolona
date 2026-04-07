@@ -47,9 +47,16 @@ export const ProfileModal = ({ isOpen, onClose, user, profile, onSave }) => {
     if (!file) return;
     setUploading(true);
     try {
+      // Força refresh do token e ping de rede antes de iniciar um upload
+      // Previne travamentos silenciosos da conexão após períodos de inatividade
+      await supabase.auth.getSession();
+
       const fileExt = file.name.split('.').pop();
       const filePath = `${user.id}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-      const { error } = await supabase.storage.from('avatars').upload(filePath, file);
+      const { error } = await supabase.storage.from('avatars').upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: true
+      });
       if (error) throw error;
       const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
       setAvatarUrl(data.publicUrl);
