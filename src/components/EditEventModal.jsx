@@ -110,37 +110,39 @@ export const EditEventModal = ({ isOpen, onClose, onSuccess, event, isResponsibl
           </div>
         </div>
 
-        <div className="space-y-2">
-          <label className="text-xs font-bold uppercase text-zinc-400">Cozinheiros (Responsáveis) {isResponsibleOnly && "(Apenas Admin)"}</label>
-          <div className={`max-h-48 overflow-y-auto space-y-2 p-1 border border-zinc-100 dark:border-zinc-800 rounded-xl ${isResponsibleOnly ? 'opacity-70 grayscale-[0.3]' : ''}`}>
-            {users.map(u => {
-              const uName = u.name || u.email.split('@')[0];
-              const uAvatar = u.avatar_url;
-              const isSelected = selectedResponsibles.includes(u.id);
-              return (
-                <div
-                  key={u.id}
-                  onClick={() => toggleResponsible(u.id)}
-                  className={`flex items-center gap-3 p-2 rounded-lg transition-colors ${
-                    isSelected ? 'bg-zinc-100 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-600' : 'border border-transparent'
-                  } ${isResponsibleOnly ? 'cursor-default' : 'cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
-                >
-                  <div className="w-8 h-8 bg-zinc-200 dark:bg-zinc-700 rounded-full flex items-center justify-center font-bold text-zinc-500 overflow-hidden shrink-0 text-xs">
-                    {uAvatar ? (
-                      <img src={uAvatar} alt="" className="w-full h-full object-cover" />
-                    ) : (uName || 'U').charAt(0).toUpperCase()}
+        {!isResponsibleOnly && (
+          <div className="space-y-2">
+            <label className="text-xs font-bold uppercase text-zinc-400">Cozinheiros (Responsáveis)</label>
+            <div className="max-h-48 overflow-y-auto space-y-2 p-1 border border-zinc-100 dark:border-zinc-800 rounded-xl">
+              {users.map(u => {
+                const uName = u.name || u.email.split('@')[0];
+                const uAvatar = u.avatar_url;
+                const isSelected = selectedResponsibles.includes(u.id);
+                return (
+                  <div
+                    key={u.id}
+                    onClick={() => toggleResponsible(u.id)}
+                    className={`flex items-center gap-3 p-2 rounded-lg transition-colors cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/50 ${
+                      isSelected ? 'bg-zinc-100 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-600' : 'border border-transparent'
+                    }`}
+                  >
+                    <div className="w-8 h-8 bg-zinc-200 dark:bg-zinc-700 rounded-full flex items-center justify-center font-bold text-zinc-500 overflow-hidden shrink-0 text-xs">
+                      {uAvatar ? (
+                        <img src={uAvatar} alt="" className="w-full h-full object-cover" />
+                      ) : (uName || 'U').charAt(0).toUpperCase()}
+                    </div>
+                    <p className="flex-1 text-sm font-bold truncate text-zinc-900 dark:text-white capitalize">{uName}</p>
+                    <div className={`w-5 h-5 rounded border flex items-center justify-center ${
+                      isSelected ? 'bg-zinc-900 border-zinc-900 text-white dark:bg-white dark:border-white dark:text-black' : 'border-zinc-300 dark:border-zinc-600'
+                    }`}>
+                      {isSelected && <span className="text-xs">✓</span>}
+                    </div>
                   </div>
-                  <p className="flex-1 text-sm font-bold truncate text-zinc-900 dark:text-white capitalize">{uName}</p>
-                  <div className={`w-5 h-5 rounded border flex items-center justify-center ${
-                    isSelected ? 'bg-zinc-900 border-zinc-900 text-white dark:bg-white dark:border-white dark:text-black' : 'border-zinc-300 dark:border-zinc-600'
-                  }`}>
-                    {isSelected && <span className="text-xs">✓</span>}
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="flex gap-3 pt-4">
           <button type="button" onClick={onClose} className="flex-1 p-3 border border-zinc-200 dark:border-zinc-700 rounded-xl font-bold text-sm text-zinc-900 dark:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">

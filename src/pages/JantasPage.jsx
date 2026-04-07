@@ -80,7 +80,7 @@ export default function JantasPage() {
           toAutoClose.forEach(j => { j.status = 'Finalizado'; });
         }
 
-        setJantas(data.map(j => {
+        const formattedJantas = data.map(j => {
           const presentes = j.attendances?.filter(a => a.status === 'Presente') || [];
           const userAtt = j.attendances?.find(a => a.user_id === user.id);
           const eventDate = new Date(j.date);
@@ -100,7 +100,22 @@ export default function JantasPage() {
             userStatus: userAtt ? userAtt.status : null,
             created_by: j.created_by,
           };
-        }));
+        });
+
+        // Ordenação inteligente: Abertas (crescente -> próxima janta primeiro),
+        // Fechadas (decrescente -> recém concluída primeiro).
+        formattedJantas.sort((a, b) => {
+          if (a.status === 'Aberto' && b.status === 'Aberto') {
+            return new Date(a.rawDate) - new Date(b.rawDate);
+          }
+          if (a.status !== 'Aberto' && b.status !== 'Aberto') {
+            return new Date(b.rawDate) - new Date(a.rawDate);
+          }
+          if (a.status === 'Aberto') return -1;
+          return 1;
+        });
+
+        setJantas(formattedJantas);
       }
     } catch (error) {
       console.error('Error fetching jantas:', error);
