@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Calendar, Users, Percent, AlertCircle, Utensils, Lock } from 'lucide-react';
+import { Calendar, Users, Percent, AlertCircle, Utensils, Lock, Star, Cake, CheckCircle2, XCircle, Trophy } from 'lucide-react';
 import { Card } from '../components/Card';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -7,6 +7,7 @@ import { Link } from 'react-router-dom';
 import { JustificativaModal } from '../components/JustificativaModal';
 import { EventDetailModal } from '../components/EventDetailModal';
 import { EditEventModal } from '../components/EditEventModal';
+import { RatingModal } from '../components/RatingModal';
 
 // Regra: o prazo de confirmação encerra no DIA ANTERIOR à janta às 16:00 BRT.
 const isEventPastDeadline = (eventDateStr) => {
@@ -42,26 +43,80 @@ export default function DashboardPage() {
   const [detailEvent, setDetailEvent] = useState(null);
   const [editEvent, setEditEvent] = useState(null);
   const [error, setError] = useState(null);
+  // Aniversariantes
+  const [aniversariantes, setAniversariantes] = useState([]);
+  // Rating
+  const [ratingEvent, setRatingEvent] = useState(null);
+  const [ratingLoading, setRatingLoading] = useState(false);
+  const [pendingRatingEvent, setPendingRatingEvent] = useState(null);
+  // Ranking
+  const [ranking, setRanking] = useState([]);
 
   const fetchDashboardData = useCallback(async () => {
     if (!user?.id) return;
     setError(null);
     try {
+      const currentYear = new Date().getFullYear();
+      const currentMonth = new Date().getMonth() + 1;
+      const today = new Date().toISOString().split('T')[0];
+
       const [
         { data: jantasData, error: jantasErr },
         { count: membrosCount },
         { count: inadimplentesCount },
         { data: attendances },
-        { data: allProfiles }
+        { data: allProfiles },
+        { data: allProfilesWithBirthday },
+        { data: finishedEvents },
+        { data: myRatings },
       ] = await Promise.all([
         supabase.from('events').select('*, attendances(user_id, status)').eq('status', 'Aberto').order('date', { ascending: true }),
         supabase.from('profiles').select('*', { count: 'exact', head: true }),
         supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('inadimplente', true),
         supabase.from('attendances').select('*').eq('user_id', user.id),
         supabase.from('profiles').select('id, name, email'),
+        supabase.from('profiles').select('id, name, avatar_url, data_nascimento').not('data_nascimento', 'is', null),
+        supabase.from('events').select('id, name, date, responsibles, ratings(stars, comment)').eq('status', 'Finalizado').gte('date', `${currentYear}-01-01`).lte('date', today),
+        supabase.from('ratings').select('event_id').eq('user_id', user.id),
       ]);
 
       if (jantasErr) throw jantasErr;
+
+      // ── Aniversariantes do mês
+      const birthday = (allProfilesWithBirthday || []).filter(p => {
+        const d = new Date(p.data_nascimento + 'T12:00:00');
+        return d.getMonth() + 1 === currentMonth;
+      }).sort((a, b) => new Date(a.data_nascimento).getDate() - new Date(b.data_nascimento).getDate());
+      setAniversariantes(birthday);
+
+      // ── Ranking: top 3 jantas finalizadas do ano com avaliações
+      const ratedEventIds = new Set((myRatings || []).map(r => r.event_id));
+      const ranked = (finishedEvents || [])
+        .filter(e => e.ratings?.length >= 1)
+        .map(e => ({
+          ...e,
+          avgStars: e.ratings.reduce((s, r) => s + r.stars, 0) / e.ratings.length,
+          totalRatings: e.ratings.length,
+          dateFormatted: new Date(e.date).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' }),
+        }))
+        .sort((a, b) => b.avgStars - a.avgStars || b.totalRatings - a.totalRatings)
+        .slice(0, 3);
+      setRanking(ranked);
+
+      // ── Evento pendente de avaliação (user foi Presente, não avaliou ainda)
+      const myAttendedIds = new Set((attendances || []).filter(a => a.status === 'Presente').map(a => a.event_id));
+      const pendingRating = (finishedEvents || [])
+        .filter(e => myAttendedIds.has(e.id) && !ratedEventIds.has(e.id))
+        .sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+      if (pendingRating) {
+        setPendingRatingEvent({
+          id: pendingRating.id,
+          name: pendingRating.name || 'Janta',
+          dateFormatted: new Date(pendingRating.date).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }),
+        });
+      } else {
+        setPendingRatingEvent(null);
+      }
 
       if (jantasData) {
         const profileMap = Object.fromEntries((allProfiles || []).map(p => [p.id, p.name || p.email?.split('@')[0]]));
@@ -183,6 +238,24 @@ export default function DashboardPage() {
     setIsJustModalOpen(true);
   };
 
+  const handleRatingSubmit = async ({ eventId, stars, comment }) => {
+    setRatingLoading(true);
+    try {
+      const { error } = await supabase.from('ratings').upsert(
+        { event_id: eventId, user_id: user.id, stars, comment },
+        { onConflict: 'event_id,user_id' }
+      );
+      if (error) throw error;
+      setRatingEvent(null);
+      setPendingRatingEvent(null);
+      fetchDashboardData();
+    } catch (err) {
+      alert('Erro ao enviar avaliação: ' + err.message);
+    } finally {
+      setRatingLoading(false);
+    }
+  };
+
   const handleJustificativaConfirm = async (texto) => {
     await handleAttendance(justEventId, 'Falta Justificada', texto);
     setIsJustModalOpen(false);
@@ -191,6 +264,10 @@ export default function DashboardPage() {
 
   const proximaJanta = jantas.find(j => j.status === 'Aberto');
   const pastDeadline = proximaJanta ? isEventPastDeadline(proximaJanta.rawDate) : false;
+  const btnBase = 'flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border text-xs font-bold transition-all active:scale-[0.97]';
+  const btnPresente = proximaJanta?.userStatus === 'Presente' ? 'bg-green-500 border-green-500 text-white' : 'border-green-400 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20';
+  const btnJust = proximaJanta?.userStatus === 'Falta Justificada' ? 'bg-amber-500 border-amber-500 text-white' : 'border-amber-400 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20';
+  const btnAusente = proximaJanta?.userStatus === 'Ausente' ? 'bg-zinc-500 border-zinc-500 text-white' : 'border-zinc-300 dark:border-zinc-600 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800';
 
   if (loading) return <div className="p-8 text-center text-zinc-400 dark:text-[#5E5853] animate-pulse text-sm">Carregando painel...</div>;
 
@@ -243,6 +320,30 @@ export default function DashboardPage() {
         ))}
       </div>
 
+      {/* ── Aniversariantes do Mês ── */}
+      {aniversariantes.length > 0 && (
+        <Card className="!p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Cake size={16} className="text-pink-500" />
+            <h2 className="text-sm font-bold text-zinc-900 dark:text-white">Aniversariantes do Mês</h2>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {aniversariantes.map(p => {
+              const day = new Date(p.data_nascimento + 'T12:00:00').getDate();
+              return (
+                <div key={p.id} className="flex items-center gap-2 px-3 py-1.5 bg-pink-50 dark:bg-pink-500/10 border border-pink-100 dark:border-pink-500/20 rounded-xl">
+                  <div className="w-6 h-6 rounded-full bg-pink-200 dark:bg-pink-500/20 flex items-center justify-center text-[10px] font-bold text-pink-600 overflow-hidden shrink-0">
+                    {p.avatar_url ? <img src={p.avatar_url} alt={p.name} className="w-full h-full object-cover" /> : (p.name || 'U').charAt(0).toUpperCase()}
+                  </div>
+                  <span className="text-xs font-semibold text-pink-700 dark:text-pink-300 capitalize">{p.name?.split(' ')[0] || 'Usuário'}</span>
+                  <span className="text-[10px] text-pink-400 font-bold">dia {day}</span>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
+
       {/* ── Próxima Janta ── */}
       <section>
         <Card
@@ -270,40 +371,27 @@ export default function DashboardPage() {
 
                 <div className="flex flex-wrap gap-2 w-full md:w-auto" onClick={e => e.stopPropagation()}>
                   {proximaJanta.responsibles.includes(user.id) ? (
-                    <button disabled className="flex-1 md:flex-none border border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-4 py-2 text-xs font-semibold rounded-xl flex items-center gap-2 cursor-not-allowed">
-                      <Lock size={12} /> Responsável
-                    </button>
-                  ) : proximaJanta.userStatus === 'Presente' ? (
-                    <button disabled className="flex-1 md:flex-none border border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-4 py-2 text-xs font-semibold rounded-xl flex items-center gap-2 cursor-not-allowed">
-                      <Lock size={12} /> Confirmado
-                    </button>
-                  ) : proximaJanta.userStatus === 'Falta Justificada' ? (
-                    <button disabled className="flex-1 md:flex-none border border-amber-400/40 text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 px-4 py-2 text-xs font-semibold rounded-xl flex items-center gap-2 cursor-not-allowed">
-                      <Lock size={12} /> Justificado
-                    </button>
-                  ) : proximaJanta.userStatus === 'Ausente' ? (
-                    <button disabled className="flex-1 md:flex-none border border-zinc-300 dark:border-white/10 text-zinc-400 dark:text-[#5a5a80] bg-zinc-50 dark:bg-white/[0.03] px-4 py-2 text-xs font-semibold rounded-xl flex items-center gap-2 cursor-not-allowed">
-                      <Lock size={12} /> Não vai
-                    </button>
+                    <div className="flex items-center gap-2 px-4 py-2.5 bg-zinc-50 dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700">
+                      <Lock size={13} className="text-zinc-400" />
+                      <span className="text-xs font-bold text-zinc-500">Você é responsável</span>
+                    </div>
                   ) : pastDeadline ? (
-                    <button disabled className="flex-1 md:flex-none border border-red-300 dark:border-red-500/20 text-red-400 bg-red-50 dark:bg-red-500/[0.06] px-4 py-2 text-xs font-semibold rounded-xl cursor-not-allowed">
-                      Prazo Encerrado
-                    </button>
+                    <div className="flex items-center gap-2 px-4 py-2.5 bg-zinc-50 dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700">
+                      <Lock size={13} className="text-zinc-400 shrink-0" />
+                      <span className="text-xs text-zinc-500">Prazo encerrado às 16h do dia anterior.</span>
+                    </div>
                   ) : (
-                    <>
-                      <button onClick={() => handleAttendance(proximaJanta.id, 'Presente')} disabled={actionLoading}
-                        className="flex-1 md:flex-none border border-emerald-500/50 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 px-4 py-2 text-xs font-semibold rounded-xl transition-colors whitespace-nowrap">
-                        {actionLoading ? '...' : '✓ Confirmar'}
+                    <div className="flex gap-2 w-full md:w-auto">
+                      <button disabled={actionLoading} onClick={() => handleAttendance(proximaJanta.id, 'Presente')} className={`${btnBase} ${btnPresente}`}>
+                        <CheckCircle2 size={14} /> Presente
                       </button>
-                      <button onClick={() => handleAttendance(proximaJanta.id, 'Ausente')} disabled={actionLoading}
-                        className="flex-1 md:flex-none border border-red-400/40 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/20 px-4 py-2 text-xs font-semibold rounded-xl transition-colors whitespace-nowrap">
-                        {actionLoading ? '...' : '✕ Não vou'}
+                      <button disabled={actionLoading} onClick={() => handleJustificado(proximaJanta.id)} className={`${btnBase} ${btnJust}`}>
+                        <AlertCircle size={14} /> Justificada
                       </button>
-                      <button onClick={() => handleJustificado(proximaJanta.id)} disabled={actionLoading}
-                        className="flex-1 md:flex-none border border-amber-400/40 bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-500/20 px-4 py-2 text-xs font-semibold rounded-xl transition-colors whitespace-nowrap">
-                        {actionLoading ? '...' : 'Justificado'}
+                      <button disabled={actionLoading} onClick={() => handleAttendance(proximaJanta.id, 'Ausente')} className={`${btnBase} ${btnAusente}`}>
+                        <XCircle size={14} /> Não Vou
                       </button>
-                    </>
+                    </div>
                   )}
                 </div>
               </div>
@@ -315,6 +403,59 @@ export default function DashboardPage() {
           </div>
         </Card>
       </section>
+
+      {/* ── Avalie a última janta ── */}
+      {pendingRatingEvent && (
+        <Card className="!p-4 border-l-4 border-l-[#2842B5]">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-xl bg-[#2842B5]/10 dark:bg-[#2842B5]/20 flex items-center justify-center shrink-0">
+                <Star size={16} className="text-[#2842B5] dark:text-[#B8ABCF]" />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-0.5">Avalie a última janta</p>
+                <p className="text-sm font-semibold text-zinc-900 dark:text-white capitalize">{pendingRatingEvent.name}</p>
+                <p className="text-[11px] text-zinc-400 capitalize mt-0.5">{pendingRatingEvent.dateFormatted}</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setRatingEvent(pendingRatingEvent)}
+              className="shrink-0 px-3 py-1.5 bg-[#2842B5] text-white text-xs font-bold rounded-xl hover:bg-[#3452c5] transition-colors"
+            >
+              Avaliar
+            </button>
+          </div>
+        </Card>
+      )}
+
+      {/* ── Top 3 Ranking ── */}
+      {ranking.length > 0 && (
+        <section className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Trophy size={16} className="text-amber-500" />
+            <h2 className="text-base font-semibold text-zinc-900 dark:text-white tracking-tight">Top Jantas do Ano</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {ranking.map((e, i) => {
+              const medals = ['🥇', '🥈', '🥉'];
+              return (
+                <Card key={e.id} className="!p-4 flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-lg">{medals[i]}</span>
+                    <div className="flex items-center gap-1">
+                      <Star size={12} className="text-amber-400 fill-amber-400" />
+                      <span className="text-xs font-bold text-zinc-900 dark:text-white">{e.avgStars.toFixed(1)}</span>
+                      <span className="text-[10px] text-zinc-400">({e.totalRatings})</span>
+                    </div>
+                  </div>
+                  <p className="text-sm font-bold text-zinc-900 dark:text-white capitalize leading-tight">{e.name || 'Janta'}</p>
+                  <p className="text-[11px] text-zinc-400 capitalize">{e.dateFormatted}</p>
+                </Card>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* ── Jantas Recentes ── */}
       <section className="space-y-3">
@@ -379,6 +520,14 @@ export default function DashboardPage() {
         onSuccess={fetchDashboardData}
         event={editEvent}
         isResponsibleOnly={true}
+      />
+
+      <RatingModal
+        isOpen={!!ratingEvent}
+        onClose={() => setRatingEvent(null)}
+        event={ratingEvent}
+        onSubmit={handleRatingSubmit}
+        loading={ratingLoading}
       />
     </div>
   );

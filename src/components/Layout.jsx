@@ -59,12 +59,12 @@ export default function Layout() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  const handleProfileSave = async ({ phone, name, avatarUrl, pix }) => {
+  const handleProfileSave = async ({ phone, name, avatarUrl, pix, dataNascimento }) => {
     setIsProfileOpen(false);
     try {
       const { error } = await supabase
         .from('profiles')
-        .update({ telefone: phone, name, pix, avatar_url: avatarUrl })
+        .update({ telefone: phone, name, pix, avatar_url: avatarUrl, data_nascimento: dataNascimento || null })
         .eq('id', user.id);
       if (error) throw error;
       await supabase.auth.updateUser({ data: { name, phone, pix } });

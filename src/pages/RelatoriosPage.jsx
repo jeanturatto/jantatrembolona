@@ -40,7 +40,7 @@ export default function RelatoriosPage() {
 
         const [eventsRes, profilesRes, monthAttsRes, allAttsRes] = await Promise.all([
           supabase.from('events').select('id').gte('date', startDate).lte('date', endDate),
-          supabase.from('profiles').select('id, name, email, avatar_url, inadimplente').order('name'),
+          supabase.from('profiles').select('id, name, email, avatar_url, inadimplente, role, telefone, pix').order('name'),
           supabase.from('attendances').select('*').gte('created_at', startDate).lte('created_at', endDate),
           // All-time justified to determine "corda bamba"
           supabase.from('attendances').select('user_id, status').eq('status', 'Falta Justificada')
@@ -75,6 +75,10 @@ export default function RelatoriosPage() {
             name: p.name || p.email?.split('@')[0] || 'Usuário',
             email: p.email,
             avatar_url: p.avatar_url,
+            role: p.role,
+            telefone: p.telefone,
+            pix: p.pix,
+            inadimplente: p.inadimplente,
             presentes, justificadas, ausentes, perc,
             naoVouCount: ausentes,
             allTimeJust,

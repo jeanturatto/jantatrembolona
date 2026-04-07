@@ -8,6 +8,7 @@ export const ProfileModal = ({ isOpen, onClose, user, profile, onSave }) => {
   const [name, setName] = useState(profile?.name || '');
   const [pix, setPix] = useState(profile?.pix || '');
   const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url || '');
+  const [dataNascimento, setDataNascimento] = useState(profile?.data_nascimento || '');
   const [uploading, setUploading] = useState(false);
   const [stats, setStats] = useState({ presencas: 0, faltas: 0, perc: 0 });
 
@@ -18,6 +19,7 @@ export const ProfileModal = ({ isOpen, onClose, user, profile, onSave }) => {
       setName(profile.name || '');
       setPix(profile.pix || '');
       setAvatarUrl(profile.avatar_url || '');
+      setDataNascimento(profile.data_nascimento || '');
     }
   }, [profile]);
 
@@ -108,6 +110,17 @@ export const ProfileModal = ({ isOpen, onClose, user, profile, onSave }) => {
               <input value={pix} onChange={e => setPix(e.target.value)} placeholder="Sua chave PIX" className={inputClass} />
             </div>
           </div>
+          <div className="space-y-1">
+            <label className={labelClass}>Data de Nascimento</label>
+            <input
+              type="date"
+              value={dataNascimento}
+              onChange={e => setDataNascimento(e.target.value)}
+              className={inputClass}
+              style={{ colorScheme: 'light dark' }}
+            />
+            <p className="text-[10px] text-zinc-400">Usada para o calendário de aniversariantes do grupo.</p>
+          </div>
         </div>
 
         {/* Real stats */}
@@ -135,7 +148,7 @@ export const ProfileModal = ({ isOpen, onClose, user, profile, onSave }) => {
           </button>
           <button
             disabled={uploading}
-            onClick={() => onSave?.({ phone, name, avatarUrl, pix })}
+            onClick={() => onSave?.({ phone, name, avatarUrl, pix, dataNascimento })}
             className="flex-1 p-3 bg-zinc-900 text-white dark:bg-white dark:text-black rounded-xl font-bold text-sm transition-transform active:scale-[0.98] disabled:opacity-50"
           >
             {uploading ? 'Aguarde...' : 'Salvar'}

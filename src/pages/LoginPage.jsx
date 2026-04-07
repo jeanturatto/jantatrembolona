@@ -3,6 +3,7 @@ import { Utensils, Ban, ArrowRight } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Modal } from '../components/Modal';
+import { supabase } from '../lib/supabase';
 
 const translateError = (errorMsg) => {
   if (errorMsg.includes('Invalid login credentials')) return 'E-mail ou senha incorretos.';
@@ -44,9 +45,22 @@ export default function LoginPage() {
   const [success, setSuccess] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isBlockedModalOpen, setIsBlockedModalOpen] = useState(false);
+  const [appLogoUrl, setAppLogoUrl] = useState('');
+  const [appName, setAppName] = useState('Janta Trembolona');
 
   const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    supabase.from('app_settings').select('key, value').then(({ data }) => {
+      if (data) {
+        data.forEach(({ key, value }) => {
+          if (key === 'app_icon_url' && value) setAppLogoUrl(value);
+          if (key === 'app_name' && value) setAppName(value);
+        });
+      }
+    });
+  }, []);
 
   useEffect(() => {
     if (localStorage.getItem('show_blocked_modal') === 'true') {
@@ -97,11 +111,14 @@ export default function LoginPage() {
 
         {/* Brand header */}
         <div className="flex flex-col items-center mb-8 text-center">
-          <div className="w-14 h-14 bg-[#2842B5] rounded-2xl flex items-center justify-center mb-4 shadow-xl shadow-[#2842B5]/30">
-            <Utensils className="text-white" size={24} />
+          <div className="w-14 h-14 bg-[#2842B5] rounded-2xl flex items-center justify-center mb-4 shadow-xl shadow-[#2842B5]/30 overflow-hidden">
+            {appLogoUrl
+              ? <img src={appLogoUrl} alt="Logo" className="w-full h-full object-cover" />
+              : <Utensils className="text-white" size={24} />
+            }
           </div>
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">
-            Janta Trembolona
+            {appName}
           </h1>
           <p className="text-[11px] font-medium uppercase tracking-widest text-zinc-400 dark:text-[#5a5a80] mt-1.5">
             {isLogin ? 'Acesso Restrito' : 'Cadastro de Membro'}
