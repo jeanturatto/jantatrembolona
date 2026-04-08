@@ -60,16 +60,12 @@ export default function DashboardPage() {
       const currentMonth = new Date().getMonth() + 1;
       const today = new Date().toISOString().split('T')[0];
 
-      const [
-        { data: jantasData, error: jantasErr },
-        { count: membrosCount },
-        { count: inadimplentesCount },
-        { data: attendances },
-        { data: allProfiles },
-        { data: allProfilesWithBirthday },
-        { data: finishedEvents },
-        { data: myRatings },
-      ] = await Promise.all([
+      const withTimeout = (promise, ms) => Promise.race([
+        promise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), ms))
+      ]);
+
+      const fetchPromises = Promise.all([
         supabase.from('events').select('*, attendances(user_id, status)').eq('status', 'Aberto').order('date', { ascending: true }),
         supabase.from('profiles').select('*', { count: 'exact', head: true }),
         supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('inadimplente', true),
@@ -79,6 +75,19 @@ export default function DashboardPage() {
         supabase.from('events').select('id, name, date, responsibles, ratings(stars, comment)').eq('status', 'Finalizado').gte('date', `${currentYear}-01-01`).lte('date', today),
         supabase.from('ratings').select('event_id').eq('user_id', user.id),
       ]);
+
+      const results = await withTimeout(fetchPromises, 12000); // 12 seconds max timeout
+      
+      const [
+        { data: jantasData, error: jantasErr },
+        { count: membrosCount },
+        { count: inadimplentesCount },
+        { data: attendances },
+        { data: allProfiles },
+        { data: allProfilesWithBirthday },
+        { data: finishedEvents },
+        { data: myRatings },
+      ] = results;
 
       if (jantasErr) throw jantasErr;
 
@@ -157,7 +166,11 @@ export default function DashboardPage() {
       }
     } catch (error) {
       console.error('Error fetching dashboard:', error);
-      setError('Erro ao carregar dados. Tente recarregar a página.');
+      if (error.message === 'TIMEOUT') {
+        setError('A conexão com o banco de dados falhou ou está instável lenta. Verifique sua intenet e tente recarregar a página.');
+      } else {
+        setError('Erro ao carregar dados. Tente recarregar a página.');
+      }
     } finally {
       setLoading(false);
     }

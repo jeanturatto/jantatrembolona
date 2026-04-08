@@ -59,7 +59,7 @@ export default function Layout() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  const handleProfileSave = async ({ phone, name, avatarUrl, pix, dataNascimento, newPassword }) => {
+  const handleProfileSave = async ({ phone, name, avatarUrl, pix, dataNascimento, newPassword, oldPassword }) => {
     setIsProfileOpen(false);
     try {
       const { error } = await supabase
@@ -70,6 +70,22 @@ export default function Layout() {
       
       const updateData = { data: { name, phone, pix } };
       if (newPassword && newPassword.length >= 6) {
+        if (!oldPassword) {
+            showToast('A senha atual é obrigatória para alterar a senha.', 'error');
+            return;
+        }
+        
+        await supabase.auth.refreshSession();
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+            email: user.email,
+            password: oldPassword
+        });
+
+        if (signInError) {
+            showToast('A senha atual está incorreta.', 'error');
+            return;
+        }
+
         updateData.password = newPassword;
       }
       
@@ -86,7 +102,7 @@ export default function Layout() {
   const userInitial = profile?.name?.charAt(0) || user?.email?.charAt(0) || 'U';
 
   return (
-    <div className="flex min-h-screen bg-[#f2f1fb] dark:bg-[#090914] text-zinc-900 dark:text-white font-sans overflow-x-hidden">
+    <div className="flex min-h-[100dvh] w-full max-w-[100vw] bg-background text-on-background font-sans overflow-x-hidden">
 
       {/* ── MOBILE HEADER ── */}
       <header className="md:hidden fixed top-0 inset-x-0 h-16 z-40 flex items-center justify-between px-4
@@ -234,9 +250,9 @@ export default function Layout() {
       </aside>
 
       {/* ── MAIN CONTENT ── */}
-      <main className="flex-1 md:ml-60 pt-16 md:pt-0 min-w-0 overflow-x-hidden">
-        <div className="dark:dot-grid min-h-screen">
-          <div className="max-w-5xl mx-auto px-4 md:px-8 py-6 md:py-8 h-full flex flex-col">
+      <main className="flex-1 md:ml-60 pt-16 md:pt-0 w-full max-w-full overflow-x-hidden">
+        <div className="dark:dot-grid min-h-[100dvh]">
+          <div className="w-full max-w-5xl mx-auto px-4 md:px-8 py-6 md:py-8 h-full flex flex-col">
             <Outlet />
           </div>
         </div>

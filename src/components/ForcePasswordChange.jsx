@@ -4,7 +4,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { Lock } from 'lucide-react';
 
 export default function ForcePasswordChange() {
-  const { user, signOut, refreshProfile } = useAuth();
+  const { user, signOut } = useAuth();
+  const [oldPassword, setOldPassword] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -13,6 +14,10 @@ export default function ForcePasswordChange() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!oldPassword) {
+      setError('A senha atual fornecida pelo admin é obrigatória.');
+      return;
+    }
     if (password.length < 6) {
       setError('A senha deve ter no mínimo 6 caracteres.');
       return;
@@ -26,11 +31,20 @@ export default function ForcePasswordChange() {
     setError('');
     
     try {
-      // Força um destravamento de sessão para evitar o bug de 'silent hang' no Promise
+      // Força um destravamento de sessão e reautentica para validar a senha antiga
       await supabase.auth.refreshSession();
       
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: oldPassword
+      });
+
+      if (signInError) {
+        throw new Error('A senha atual/provisória informada está incorreta.');
+      }
+      
       // 1. Atualizar a senha no Supabase Auth
-      const { data, error: updateError } = await supabase.auth.updateUser({ password });
+      const { error: updateError } = await supabase.auth.updateUser({ password });
       if (updateError) throw updateError;
 
       // 2. Remover a flag must_change_password do profile
@@ -42,9 +56,10 @@ export default function ForcePasswordChange() {
       if (profileError) throw profileError;
 
       setSuccess('Senha alterada com sucesso! Redirecionando...');
-      setTimeout(async () => {
-        await refreshProfile(user.id);
-      }, 1000);
+      // Força o reload da página inteira para limpar todas as sessões e context cache state em memória
+      setTimeout(() => {
+        window.location.replace('/');
+      }, 800);
 
     } catch (err) {
       console.error('Password reset error:', err);
@@ -71,6 +86,16 @@ export default function ForcePasswordChange() {
         {success && <div className="mb-4 p-3 bg-green-50 text-green-600 text-sm rounded-xl font-medium">{success}</div>}
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-1">
+            <label className="text-xs font-bold uppercase text-zinc-400">Senha Provisória (Atual)</label>
+            <input
+              type="password"
+              required
+              value={oldPassword}
+              onChange={(e) => setOldPassword(e.target.value)}
+              className="w-full p-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:border-zinc-900 dark:focus:border-white transition-all text-sm font-medium"
+            />
+          </div>
           <div className="space-y-1">
             <label className="text-xs font-bold uppercase text-zinc-400">Nova Senha</label>
             <input

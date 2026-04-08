@@ -9,6 +9,7 @@ export const ProfileModal = ({ isOpen, onClose, user, profile, onSave }) => {
   const [pix, setPix] = useState(profile?.pix || '');
   const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url || '');
   const [dataNascimento, setDataNascimento] = useState(profile?.data_nascimento || '');
+  const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [uploading, setUploading] = useState(false);
@@ -138,11 +139,17 @@ export const ProfileModal = ({ isOpen, onClose, user, profile, onSave }) => {
               <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Mínimo de 6 caracteres (Opcional)" className={inputClass} />
             </div>
             {newPassword && (
-              <div className="space-y-1">
-                <label className={labelClass}>Confirmar Nova Senha</label>
-                <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="Repita a nova senha" className={inputClass} />
-                {newPassword !== confirmPassword && <p className="text-[10px] font-bold text-red-500 mt-1">As senhas não coincidem.</p>}
-              </div>
+              <>
+                <div className="space-y-1">
+                  <label className={labelClass}>Senha Atual</label>
+                  <input type="password" value={oldPassword} onChange={e => setOldPassword(e.target.value)} placeholder="Digite sua senha atual" className={inputClass} />
+                </div>
+                <div className="space-y-1">
+                  <label className={labelClass}>Confirmar Nova Senha</label>
+                  <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="Repita a nova senha" className={inputClass} />
+                  {newPassword !== confirmPassword && <p className="text-[10px] font-bold text-red-500 mt-1">As senhas não coincidem.</p>}
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -172,7 +179,7 @@ export const ProfileModal = ({ isOpen, onClose, user, profile, onSave }) => {
           </button>
           <button
             disabled={uploading || (newPassword && newPassword !== confirmPassword) || (newPassword && newPassword.length < 6)}
-            onClick={() => onSave?.({ phone, name, avatarUrl, pix, dataNascimento, newPassword })}
+            onClick={() => onSave?.({ phone, name, avatarUrl, pix, dataNascimento, newPassword, oldPassword })}
             className="flex-1 p-3 bg-zinc-900 text-white dark:bg-white dark:text-black rounded-xl font-bold text-sm transition-transform active:scale-[0.98] disabled:opacity-50"
           >
             {uploading ? 'Aguarde...' : 'Salvar'}
