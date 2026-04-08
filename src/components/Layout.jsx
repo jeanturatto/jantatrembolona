@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { ProfileModal } from './ProfileModal';
+import { CreateEventModal } from './CreateEventModal';
 import { supabase } from '../lib/supabase';
 
 export default function Layout() {
@@ -22,7 +23,8 @@ export default function Layout() {
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [appConfig, setAppConfig] = useState({ name: 'Janta Trembolona', subtitle: 'Grupo de Jantas', iconUrl: '' });
+  const [isCreateOpen, setIsCreateOpen] = useState(false); // New state for New Entry button
+  const [appConfig, setAppConfig] = useState({ name: 'Janta', subtitle: 'TREMBOLONA ELITE', iconUrl: '' });
   const [toast, setToast] = useState(null);
 
   useEffect(() => {
@@ -139,32 +141,23 @@ export default function Layout() {
       {/* ── SIDEBAR ── */}
       <aside className={`
         fixed h-full w-72 md:w-60 z-50 flex flex-col
-        bg-white dark:bg-[#0b0b1e]
-        border-r border-[#2842B5]/08 dark:border-white/[0.06]
+        bg-white dark:bg-[#121226]
+        border-r border-zinc-100 dark:border-white/[0.05]
         transition-transform duration-300
         ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
         md:translate-x-0
       `}>
 
         {/* Logo */}
-        <div className="px-5 h-16 flex items-center justify-between border-b border-[#2842B5]/08 dark:border-white/[0.06] shrink-0">
+        <div className="px-6 h-24 flex items-center border-b border-zinc-100 dark:border-white/[0.05] shrink-0">
           <div className="flex items-center gap-3 overflow-hidden">
-            {appConfig.iconUrl ? (
-              <div className="w-9 h-9 rounded-xl overflow-hidden shrink-0">
-                <img src={appConfig.iconUrl} alt="logo" className="w-full h-full object-cover" />
-              </div>
-            ) : (
-              <div className="w-9 h-9 bg-[#2842B5] rounded-xl flex items-center justify-center shrink-0 shadow-lg shadow-[#2842B5]/30">
-                <Utensils className="text-white" size={17} />
-              </div>
-            )}
-            <div className="overflow-hidden">
-              <p className="font-bold text-sm text-zinc-900 dark:text-white tracking-tight truncate leading-tight">{appConfig.name}</p>
-              <p className="text-[10px] text-[#2842B5] dark:text-[#B8ABCF]/60 uppercase tracking-widest truncate">{appConfig.subtitle}</p>
+            <div className="flex flex-col">
+              <p className="font-extrabold text-lg text-zinc-900 dark:text-white tracking-tight leading-tight">{appConfig.name}</p>
+              <p className="text-[10px] font-medium text-zinc-400 dark:text-[#5a5a80] uppercase tracking-widest">{appConfig.subtitle}</p>
             </div>
           </div>
           <button
-            className="md:hidden p-1.5 text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors rounded-lg"
+            className="md:hidden p-1.5 text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors rounded-lg ml-auto"
             onClick={() => setIsMobileMenuOpen(false)}
           >
             <X size={18} />
@@ -172,9 +165,7 @@ export default function Layout() {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-          <p className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-widest text-zinc-300 dark:text-[#3a3a60]">Menu</p>
-
+        <nav className="flex-1 px-4 py-8 space-y-2 overflow-y-auto w-full">
           {navItems.map(item => (
             <NavLink
               key={item.to}
@@ -182,69 +173,79 @@ export default function Layout() {
               end={item.end}
               onClick={() => setIsMobileMenuOpen(false)}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                `flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
                   isActive
-                  ? 'bg-[#2842B5] text-white nav-active-glow'
-                  : 'text-zinc-500 dark:text-[#5a5a80] hover:bg-[#2842B5]/[0.08] dark:hover:bg-white/[0.04] hover:text-[#2842B5] dark:hover:text-[#B8ABCF]'
+                  ? 'bg-zinc-100 dark:bg-white/[0.08] text-zinc-900 dark:text-white shadow-sm'
+                  : 'text-zinc-400 dark:text-[#5a5a80] hover:bg-zinc-50 dark:hover:bg-white/[0.04] hover:text-zinc-600 dark:hover:text-white'
                 }`
               }
             >
-              <item.icon size={17} strokeWidth={isActive => isActive ? 2.2 : 1.8} />
+              <item.icon size={18} strokeWidth={isActive => isActive ? 2.5 : 2} className={({isActive})=> isActive ? "text-zinc-900 dark:text-white" : "text-zinc-400"} />
               {item.label}
             </NavLink>
           ))}
 
-          <button
-            onClick={() => { setIsMobileMenuOpen(false); setIsProfileOpen(true); }}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-zinc-500 dark:text-[#5a5a80] hover:bg-[#2842B5]/[0.08] dark:hover:bg-white/[0.04] hover:text-[#2842B5] dark:hover:text-[#B8ABCF] transition-all text-left"
-          >
-            <User size={17} />
-            Perfil
-          </button>
-
-          {isAdmin && (
-            <>
-              <p className="px-3 pt-4 mb-2 text-[10px] font-semibold uppercase tracking-widest text-zinc-300 dark:text-[#3a3a60]">Admin</p>
+          <div className="mt-8 pt-6 border-t border-zinc-100 dark:border-white/[0.05]">
+            <p className="px-4 mb-2 text-[10px] font-bold uppercase tracking-widest text-zinc-300 dark:text-[#3a3a60]">Ações</p>
+            <button
+              onClick={() => { setIsMobileMenuOpen(false); setIsProfileOpen(true); }}
+              className="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-semibold text-zinc-400 dark:text-[#5a5a80] hover:bg-zinc-50 dark:hover:bg-white/[0.04] hover:text-zinc-600 transition-all text-left"
+            >
+              <User size={18} strokeWidth={2} />
+              Perfil
+            </button>
+            {isAdmin && (
               <NavLink
                 to="/admin"
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={({ isActive }) =>
-                  `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                  `flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
                     isActive
-                    ? 'bg-[#2842B5] text-white nav-active-glow'
-                    : 'text-zinc-500 dark:text-[#5a5a80] hover:bg-[#2842B5]/[0.08] dark:hover:bg-white/[0.04] hover:text-[#2842B5] dark:hover:text-[#B8ABCF]'
+                    ? 'bg-zinc-100/50 dark:bg-white/[0.08] text-zinc-900 dark:text-white shadow-sm'
+                    : 'text-zinc-400 dark:text-[#5a5a80] hover:bg-zinc-50 dark:hover:bg-white/[0.04] hover:text-zinc-600 dark:hover:text-white'
                   }`
                 }
               >
-                <Settings size={17} />
+                <Settings size={18} strokeWidth={2} />
                 Painel Admin
               </NavLink>
-            </>
-          )}
+            )}
+          </div>
         </nav>
 
-        {/* User footer */}
-        <div className="px-3 py-4 border-t border-[#2842B5]/08 dark:border-white/[0.06] shrink-0">
-          <div className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-[#2842B5]/[0.05] dark:hover:bg-white/[0.03] transition-colors">
-            <div className="w-8 h-8 rounded-full bg-[#2842B5]/15 dark:bg-[#2842B5]/20 flex items-center justify-center text-xs font-bold shrink-0 text-[#2842B5] dark:text-[#B8ABCF] uppercase overflow-hidden ring-2 ring-[#2842B5]/20">
-              {profile?.avatar_url
-                ? <img src={profile.avatar_url} alt="avatar" className="w-full h-full object-cover" />
-                : userInitial
-              }
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold truncate text-zinc-900 dark:text-white capitalize">
-                {profile?.name || user?.email?.split('@')[0] || 'Usuário'}
-              </p>
-              <p className="text-[10px] text-zinc-400 dark:text-[#5a5a80] truncate">{user?.email}</p>
-            </div>
+        {/* User footer + New Entry */}
+        <div className="px-6 py-6 mt-auto">
+          {isAdmin && (
             <button
-              onClick={handleLogout}
-              className="p-1.5 text-zinc-300 dark:text-[#3a3a60] hover:text-red-500 dark:hover:text-red-400 transition-colors rounded-lg shrink-0"
-              title="Sair"
+              onClick={() => setIsCreateOpen(true)}
+              className="w-full bg-zinc-900 dark:bg-white text-white dark:text-black py-3 rounded-[0.85rem] font-semibold text-sm mb-4 flex items-center justify-center gap-2 transition-transform active:scale-[0.98] hover:opacity-90"
             >
-              <LogOut size={15} />
+              + New Entry
             </button>
+          )}
+          
+          <div className="bg-white dark:bg-[#121226] border border-zinc-100 dark:border-white/[0.06] shadow-sm rounded-xl p-3 flex flex-col gap-0 cursor-pointer hover:bg-zinc-50 dark:hover:bg-white/[0.02]" onClick={() => setIsProfileOpen(true)}>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-orange-600 font-bold shrink-0 overflow-hidden">
+                {profile?.avatar_url
+                  ? <img src={profile.avatar_url} alt="avatar" className="w-full h-full object-cover" />
+                  : userInitial
+                }
+              </div>
+              <div className="flex-1 min-w-0 flex flex-col justify-center">
+                <p className="text-xs font-bold truncate text-zinc-900 dark:text-white capitalize leading-tight">
+                  {profile?.name || user?.email?.split('@')[0] || 'Usuário'}
+                </p>
+                <p className="text-[9px] uppercase font-bold text-zinc-400 dark:text-[#5a5a80] tracking-wider mt-0.5">{isAdmin ? 'ADMIN MEMBER' : 'MEMBER'}</p>
+              </div>
+              <button
+                onClick={(e) => { e.stopPropagation(); handleLogout(); }}
+                className="p-1.5 text-zinc-300 dark:text-[#3a3a60] hover:text-red-500 dark:hover:text-red-400 transition-colors rounded-lg shrink-0 outline-none"
+                title="Sair"
+              >
+                <LogOut size={16} />
+              </button>
+            </div>
           </div>
         </div>
       </aside>
@@ -275,6 +276,12 @@ export default function Layout() {
         user={user}
         profile={profile}
         onSave={handleProfileSave}
+      />
+      
+      <CreateEventModal
+        isOpen={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        onSuccess={() => { window.dispatchEvent(new Event('dashboard_refresh')); }}
       />
     </div>
   );

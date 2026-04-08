@@ -50,6 +50,7 @@ export default function DashboardPage() {
   const [ratingLoading, setRatingLoading] = useState(false);
   const [pendingRatingEvent, setPendingRatingEvent] = useState(null);
   // Ranking
+  const [activeTab, setActiveTab] = useState('Todas');
   const [ranking, setRanking] = useState([]);
 
   const fetchDashboardData = useCallback(async () => {
@@ -66,7 +67,7 @@ export default function DashboardPage() {
       ]);
 
       const fetchPromises = Promise.all([
-        supabase.from('events').select('*, attendances(user_id, status)').eq('status', 'Aberto').order('date', { ascending: true }),
+        supabase.from('events').select('*, attendances(user_id, status)').gte('date', `${currentYear}-01-01`).order('date', { ascending: true }),
         supabase.from('profiles').select('*', { count: 'exact', head: true }),
         supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('inadimplente', true),
         supabase.from('attendances').select('*').eq('user_id', user.id),
@@ -140,6 +141,10 @@ export default function DashboardPage() {
             name: j.name || 'Janta das Quintas',
             date: eventDate.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }),
             dateFormatted: eventDate.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }),
+            dayText: eventDate.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '').toUpperCase(),
+            dateNum: eventDate.getDate().toString().padStart(2, '0'),
+            monthYearText: eventDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }),
+            timeText: eventDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
             rawDate: j.date,
             rawName: j.name,
             rawLocation: j.location,
@@ -148,6 +153,7 @@ export default function DashboardPage() {
             responsiveisNomes: responsiveisNomes || 'Nenhum responsável',
             responsibles: j.responsibles || [],
             attendees: presentes.length,
+            attendeesList: presentes.slice(0, 3).map(a => profileMap[a.user_id] || 'U'),
             userStatus: userAtt ? userAtt.status : null
           };
         });
@@ -312,125 +318,186 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6 animate-in fade-in">
 
-      {/* ── Header ── */}
-      <header className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-zinc-900 dark:text-white capitalize">
-            Olá, {profile?.name?.split(' ')[0] || user?.email?.split('@')[0] || 'Usuário'} 👋
-          </h1>
-          <p className="text-zinc-400 dark:text-[#5a5a80] text-sm mt-1">
-            Bem-vindo ao <span className="text-[#2842B5] dark:text-[#B8ABCF] font-medium">Janta Trembolona</span>
-          </p>
+      {/* ── Tabs & Header ── */}
+      <header className="flex flex-col md:flex-row md:items-end justify-between border-b pb-4 mb-6 border-zinc-100 dark:border-white/[0.05]">
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-3">
+            <div className="w-1.5 h-6 bg-zinc-900 dark:bg-white rounded-full"></div>
+            <h1 className="text-xl md:text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">
+              Próximas Jantas
+            </h1>
+          </div>
+          
+          <div className="hidden md:flex gap-4">
+            {['Todas', 'Abertas', 'Fechadas', 'Concluídas'].map(tab => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`text-sm font-semibold transition-colors ${
+                  activeTab === tab 
+                    ? 'text-zinc-900 dark:text-white border-b-2 border-zinc-900 dark:border-white pb-1 -mb-[18px]' 
+                    : 'text-zinc-400 hover:text-zinc-600 dark:text-[#5a5a80] dark:hover:text-white pb-1 -mb-[18px]'
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+        </div>
+        
+        {/* Mobile Tabs */}
+        <div className="flex md:hidden gap-3 mt-4 overflow-x-auto w-full no-scrollbar">
+          {['Todas', 'Abertas', 'Fechadas', 'Concluídas'].map(tab => (
+             <button
+             key={tab}
+             onClick={() => setActiveTab(tab)}
+             className={`shrink-0 text-sm font-semibold transition-colors ${
+               activeTab === tab 
+                 ? 'text-zinc-900 dark:text-white pb-1 border-b-2 border-zinc-900 dark:border-white' 
+                 : 'text-zinc-400 pb-1'
+             }`}
+           >
+             {tab}
+           </button>
+          ))}
         </div>
       </header>
 
-      {/* ── Stats Grid ── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 stagger">
-        {[
-          { label: "Total de Jantas", value: stats.totalJantas, icon: Calendar,     accent: "text-[#2842B5] dark:text-[#B8ABCF]", bg: "bg-[#2842B5]/08 dark:bg-[#2842B5]/15" },
-          { label: "Membros",         value: stats.membros,     icon: Users,         accent: "text-violet-500 dark:text-violet-400", bg: "bg-violet-500/08 dark:bg-violet-500/15" },
-          { label: "Sua Presença",    value: stats.presencaMedia, icon: Percent,     accent: "text-emerald-500 dark:text-emerald-400", bg: "bg-emerald-500/08 dark:bg-emerald-500/15" },
-          { label: "Inadimplentes",   value: stats.inadimplentes, icon: AlertCircle, accent: "text-red-500 dark:text-red-400", bg: "bg-red-500/08 dark:bg-red-500/15" },
-        ].map((stat, i) => (
-          <Card key={i} className="flex flex-col gap-3 !p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-semibold text-zinc-400 dark:text-[#5a5a80] tracking-wider uppercase leading-tight">{stat.label}</span>
-              <div className={`w-7 h-7 rounded-lg ${stat.bg} flex items-center justify-center shrink-0`}>
-                <stat.icon size={14} className={stat.accent} />
-              </div>
-            </div>
-            <span className={`text-3xl font-bold leading-none ${stat.accent.split(' ')[0] === 'text-red-500' && stat.value > 0 ? 'text-red-500 dark:text-red-400' : 'text-zinc-900 dark:text-white'}`}>
-              {stat.value}
-            </span>
-          </Card>
-        ))}
+      {/* ── Stats Grid (Mockup Style) ── */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <Card className="md:col-span-2 !p-6 flex flex-col justify-between h-32 relative overflow-hidden">
+          <span className="text-[10px] font-extrabold text-zinc-400 dark:text-[#5a5a80] tracking-widest uppercase">Média de Presença</span>
+          <span className="text-5xl font-extrabold text-zinc-900 dark:text-white tracking-tighter -ml-1">
+            {stats.presencaMedia}
+          </span>
+          {/* Placeholder graph */}
+          <div className="absolute right-6 bottom-4 flex items-end gap-1">
+            <span className="text-[8px] absolute -top-4 right-0 text-zinc-400 whitespace-nowrap">ÚLTIMOS 30 DIAS</span>
+            <div className="w-1.5 h-6 bg-zinc-200 dark:bg-white/10 rounded-full"></div>
+            <div className="w-1.5 h-8 bg-zinc-900 dark:bg-white rounded-full"></div>
+            <div className="w-1.5 h-5 bg-zinc-200 dark:bg-white/10 rounded-full"></div>
+            <div className="w-1.5 h-7 bg-zinc-900 dark:bg-white rounded-full"></div>
+          </div>
+        </Card>
+        
+        <Card className="!bg-zinc-900 dark:!bg-black border-none !p-6 flex flex-col justify-between h-32">
+          <span className="text-[10px] font-extrabold text-zinc-400 tracking-widest uppercase">Jantas Abertas</span>
+          <span className="text-5xl font-extrabold text-white tracking-tighter -ml-1">
+            {String(jantas.filter(j => j.status === 'Aberto').length).padStart(2, '0')}
+          </span>
+          <span className="text-[10px] text-zinc-400 font-medium">Confirme sua presença até amanhã</span>
+        </Card>
+
+        <Card className="!p-6 flex flex-col justify-between h-32">
+          <span className="text-[10px] font-extrabold text-zinc-400 dark:text-[#5a5a80] tracking-widest uppercase">Total do Mês</span>
+          <span className="text-5xl font-extrabold text-zinc-900 dark:text-white tracking-tighter -ml-1">
+            {String(stats.totalJantas).padStart(2, '0')}
+          </span>
+          <span className="text-[10px] text-zinc-400 font-medium">Meta: {jantas.length + 5} jantas</span>
+        </Card>
       </div>
 
-      {/* ── Aniversariantes do Mês ── */}
-      {aniversariantes.length > 0 && (
-        <Card className="!p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Cake size={16} className="text-pink-500" />
-            <h2 className="text-sm font-bold text-zinc-900 dark:text-white">Aniversariantes do Mês</h2>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {aniversariantes.map(p => {
-              const day = new Date(p.data_nascimento + 'T12:00:00').getDate();
-              return (
-                <div key={p.id} className="flex items-center gap-2 px-3 py-1.5 bg-pink-50 dark:bg-pink-500/10 border border-pink-100 dark:border-pink-500/20 rounded-xl">
-                  <div className="w-6 h-6 rounded-full bg-pink-200 dark:bg-pink-500/20 flex items-center justify-center text-[10px] font-bold text-pink-600 overflow-hidden shrink-0">
-                    {p.avatar_url ? <img src={p.avatar_url} alt={p.name} className="w-full h-full object-cover" /> : (p.name || 'U').charAt(0).toUpperCase()}
-                  </div>
-                  <span className="text-xs font-semibold text-pink-700 dark:text-pink-300 capitalize">{p.name?.split(' ')[0] || 'Usuário'}</span>
-                  <span className="text-[10px] text-pink-400 font-bold">dia {day}</span>
+      {/* ── Jantas Cards Grid ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {jantas
+          .filter(j => {
+             if (activeTab === 'Todas') return true;
+             if (activeTab === 'Abertas') return j.status === 'Aberto';
+             if (activeTab === 'Fechadas') return j.status === 'Fechado';
+             if (activeTab === 'Concluídas') return j.status === 'Finalizado';
+             return true;
+          })
+          .map(janta => (
+          <Card key={janta.id} className="!p-6 flex flex-col justify-between min-h-[220px]" onClick={undefined}>
+            
+            <div className="flex justify-between items-start w-full">
+              <div className="flex gap-4">
+                <div className="flex flex-col items-center">
+                  <span className="text-[10px] font-bold text-zinc-400 dark:text-[#5a5a80] uppercase -mb-1">{janta.dayText}</span>
+                  <span className="text-3xl font-extrabold text-zinc-900 dark:text-white">{janta.dateNum}</span>
                 </div>
-              );
-            })}
-          </div>
-        </Card>
-      )}
-
-      {/* ── Próxima Janta ── */}
-      <section>
-        <Card
-          className={`${proximaJanta ? 'cursor-pointer' : ''} transition-all !p-0 overflow-hidden`}
-          onClick={proximaJanta ? () => setDetailEvent(proximaJanta) : undefined}
-        >
-          {/* Blue accent bar */}
-          <div className="h-1 w-full bg-gradient-to-r from-[#2842B5] via-[#3452c5] to-[#B8ABCF]/30" />
-          <div className="p-5">
-            {proximaJanta ? (
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-[10px] font-semibold uppercase tracking-widest text-[#2842B5] dark:text-[#B8ABCF]/70">Próxima Janta</span>
-                    <span className="px-2 py-0.5 bg-[#2842B5] text-white text-[9px] font-bold rounded-full uppercase tracking-wider">Aberto</span>
-                    {pastDeadline && <span className="text-[9px] text-red-500 font-bold uppercase">⏰ Prazo encerrado</span>}
-                  </div>
-                  <h3 className="text-xl md:text-2xl font-bold text-zinc-900 dark:text-white capitalize truncate">{proximaJanta.name}</h3>
-                  <p className="text-sm text-zinc-400 dark:text-[#5a5a80] mt-1 capitalize">{proximaJanta.date}</p>
-                  <p className="text-sm text-zinc-500 dark:text-[#B8ABCF]/70 mt-1 flex items-center gap-1.5">
-                    <Utensils size={13} />
-                    <span className="capitalize">{proximaJanta.responsiveisNomes}</span>
+                <div className="mt-1">
+                  <h3 className="text-lg font-bold text-zinc-900 dark:text-white leading-tight capitalize cursor-pointer hover:underline" onClick={() => setDetailEvent(janta)}>
+                    {janta.name}
+                  </h3>
+                  <p className="text-xs text-zinc-400 font-medium capitalize mt-1">
+                    {janta.monthYearText.split(' de ')[0]}, {janta.monthYearText.split(' de ')[1]} • {janta.timeText}
                   </p>
                 </div>
+              </div>
 
-                <div className="flex flex-wrap gap-2 w-full md:w-auto" onClick={e => e.stopPropagation()}>
-                  {proximaJanta.responsibles.includes(user.id) ? (
-                    <div className="flex items-center gap-2 px-4 py-2.5 bg-zinc-50 dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700">
-                      <Lock size={13} className="text-zinc-400" />
-                      <span className="text-xs font-bold text-zinc-500">Você é responsável</span>
-                    </div>
-                  ) : pastDeadline ? (
-                    <div className="flex items-center gap-2 px-4 py-2.5 bg-zinc-50 dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700">
-                      <Lock size={13} className="text-zinc-400 shrink-0" />
-                      <span className="text-xs text-zinc-500">Prazo encerrado às 16h do dia anterior.</span>
-                    </div>
-                  ) : (
-                    <div className="flex gap-2 w-full md:w-auto">
-                      <button disabled={isDashBtnDisabled('Presente')} onClick={() => handleAttendance(proximaJanta.id, 'Presente')} className={`${btnBase} ${getDashBtnStyle('Presente')}`}>
-                        <CheckCircle2 size={14} /> Presente
-                      </button>
-                      <button disabled={isDashBtnDisabled('Falta Justificada')} onClick={() => handleJustificado(proximaJanta.id)} className={`${btnBase} ${getDashBtnStyle('Falta Justificada')}`}>
-                        <AlertCircle size={14} /> Justificada
-                      </button>
-                      <button disabled={isDashBtnDisabled('Ausente')} onClick={() => handleAttendance(proximaJanta.id, 'Ausente')} className={`${btnBase} ${getDashBtnStyle('Ausente')}`}>
-                        <XCircle size={14} /> Não Vou
-                      </button>
-                    </div>
-                  )}
+              {janta.status === 'Aberto' && (
+                <span className="bg-zinc-900 text-white text-[9px] font-extrabold uppercase px-3 py-1 rounded-full tracking-wider">Aberta</span>
+              )}
+              {janta.status === 'Fechado' && (
+                <span className="bg-zinc-100 text-zinc-500 font-extrabold text-[9px] uppercase px-3 py-1 rounded-full tracking-wider">Fechada</span>
+              )}
+              {janta.status === 'Finalizado' && (
+                <span className="flex items-center gap-1 bg-zinc-100 text-zinc-500 font-extrabold text-[9px] uppercase px-3 py-1 rounded-full tracking-wider">
+                   <CheckCircle2 size={10} /> Concluída
+                </span>
+              )}
+            </div>
+
+            <div className="mt-6 flex flex-col gap-4">
+              <div>
+                <span className="text-[8px] font-extrabold text-zinc-400 uppercase tracking-widest mb-1.5 block">Responsáveis</span>
+                <div className="flex items-center gap-2">
+                  <div className="flex -space-x-1.5">
+                     {/* Dummy profile pics, ideally from responsibles avatars */}
+                     {janta.responsibles.slice(0, 2).map((r, i) => (
+                       <div key={i} className="w-6 h-6 rounded-full border-2 border-white bg-blue-100 overflow-hidden ring-1 ring-zinc-100">
+                         <img src={`https://ui-avatars.com/api/?name=${janta.responsiveisNomes.split(', ')[i]}&background=random`} alt="av" />
+                       </div>
+                     ))}
+                  </div>
+                  <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300 capitalize">{janta.responsiveisNomes}</span>
                 </div>
               </div>
-            ) : (
-              <div className="py-4 text-center w-full">
-                <p className="text-zinc-400 dark:text-[#5a5a80] text-sm">Nenhuma janta marcada nos próximos dias.</p>
-              </div>
-            )}
-          </div>
-        </Card>
-      </section>
 
-      {/* ── Avalie a última janta ── */}
+              <div className="flex items-end justify-between mt-2">
+                <div>
+                  <span className="text-[8px] font-extrabold text-zinc-400 uppercase tracking-widest mb-1 block">Participantes</span>
+                  <div className="flex -space-x-1.5 items-center">
+                    {janta.attendees > 0 ? Array.from({length: Math.min(3, janta.attendees)}).map((_, i) => (
+                       <div key={i} className="w-6 h-6 rounded-full border-2 border-white bg-green-100 overflow-hidden ring-1 ring-zinc-100">
+                         <img src={`https://ui-avatars.com/api/?name=User&background=random`} alt="av" />
+                       </div>
+                    )) : (
+                       <span className="text-xs text-zinc-400 font-medium">Nenhum</span>
+                    )}
+                    {janta.attendees > 3 && (
+                       <span className="w-6 h-6 rounded-full border-2 border-white bg-zinc-100 flex items-center justify-center text-[8px] font-bold text-zinc-600">
+                         +{janta.attendees - 3}
+                       </span>
+                    )}
+                  </div>
+                </div>
+
+                {janta.status === 'Aberto' ? (
+                  <button 
+                    onClick={() => setDetailEvent(janta)}
+                    className="bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-xs font-bold px-5 py-2 rounded-lg transition-colors cursor-pointer"
+                  >
+                    Participar
+                  </button>
+                ) : (
+                  <button 
+                    onClick={() => setDetailEvent(janta)}
+                    className="text-zinc-900 border-b border-zinc-900 text-xs font-bold pb-0.5 hover:text-blue-600 hover:border-blue-600 transition-colors cursor-pointer"
+                  >
+                    Ver Detalhes
+                  </button>
+                )}
+              </div>
+            </div>
+
+          </Card>
+        ))}
+        {jantas.length === 0 && !loading && (
+          <p className="text-sm text-zinc-400 dark:text-[#5a5a80] py-4 text-center md:col-span-2">Nenhuma janta encontrada nos filtros atuais.</p>
+        )}
+      </div>
       {pendingRatingEvent && (
         <Card className="!p-4 border-l-4 border-l-[#2842B5]">
           <div className="flex items-start justify-between gap-3">
