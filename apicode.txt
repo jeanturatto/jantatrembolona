@@ -1,0 +1,5 @@
+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
+
+https://openrouter.ai/api/v1
+
+qwen/qwen3.6-plus:free
