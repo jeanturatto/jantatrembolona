@@ -147,7 +147,7 @@ export default function Layout() {
                 }`
               }
             >
-              <item.icon size={18} strokeWidth={isActive => isActive ? 2.5 : 2} className={({isActive})=> isActive ? "text-zinc-900 dark:text-white" : "text-zinc-400"} />
+              <item.icon size={18} strokeWidth={2} className="shrink-0" />
               {item.label}
             </NavLink>
           ))}
