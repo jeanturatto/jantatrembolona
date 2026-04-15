@@ -197,6 +197,11 @@ export default function DashboardPage() {
               avatar_url: profileMap[a.user_id]?.avatar_url || null,
               initial: (profileMap[a.user_id]?.name || 'U').charAt(0).toUpperCase(),
             })),
+            responsiblesList: (j.responsibles || []).map(id => ({
+              name: profileMap[id]?.name || 'U',
+              avatar_url: profileMap[id]?.avatar_url || null,
+              initial: (profileMap[id]?.name || 'U').charAt(0).toUpperCase(),
+            })),
             responsiveisNomes: (j.responsibles || []).map(id => profileMap[id]?.name).filter(Boolean).join(', ') || 'Nenhum responsável',
             userStatus: userAtt ? userAtt.status : null
           };
@@ -494,13 +499,21 @@ export default function DashboardPage() {
               <div>
                 <span className="text-[8px] font-extrabold text-zinc-400 uppercase tracking-widest mb-1.5 block">Responsáveis</span>
                 <div className="flex items-center gap-2">
-                  <div className="flex -space-x-1.5">
-                     {/* Dummy profile pics, ideally from responsibles avatars */}
-                     {janta.responsibles.slice(0, 2).map((r, i) => (
-                       <div key={i} className="w-6 h-6 rounded-full border-2 border-white bg-blue-100 overflow-hidden ring-1 ring-zinc-100">
-                         <img src={`https://ui-avatars.com/api/?name=${janta.responsiveisNomes.split(', ')[i]}&background=random`} alt="av" />
+                  <div className="flex -space-x-1.5 items-center">
+                     {janta.responsiblesList?.length > 0 ? janta.responsiblesList.slice(0, 2).map((resp, i) => (
+                       <div key={i} className="w-6 h-6 rounded-full border-2 border-white dark:border-zinc-900 bg-blue-100 dark:bg-blue-900/40 overflow-hidden ring-1 ring-zinc-100 dark:ring-zinc-700 text-[9px] font-bold text-blue-700 dark:text-blue-300 flex items-center justify-center">
+                         {resp.avatar_url
+                           ? <img src={resp.avatar_url} alt={resp.initial} className="w-full h-full object-cover" />
+                           : resp.initial}
                        </div>
-                     ))}
+                     )) : (
+                       <span className="text-xs text-zinc-400 font-medium">Nenhum</span>
+                     )}
+                     {janta.responsiblesList?.length > 2 && (
+                       <span className="w-6 h-6 rounded-full border-2 border-white bg-zinc-100 flex items-center justify-center text-[8px] font-bold text-zinc-600">
+                         +{janta.responsiblesList.length - 2}
+                       </span>
+                     )}
                   </div>
                   <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300 capitalize">{janta.responsiveisNomes}</span>
                 </div>
