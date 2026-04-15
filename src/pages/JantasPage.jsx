@@ -375,8 +375,8 @@ export default function JantasPage() {
                   className="flex items-center gap-2 flex-wrap justify-end"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  {/* Avaliar (se concluida, não avaliada e presente) */}
-                  {janta.status === 'Finalizado' && !myRatingsIds.has(janta.id) && janta.userStatus === 'Presente' && (
+                  {/* Avaliar (se concluida, não avaliada) */}
+                  {janta.status === 'Finalizado' && !myRatingsIds.has(janta.id) && (
                     <button onClick={() => setRatingEvent(janta)}
                       className="flex items-center gap-1 text-[10px] font-bold px-2.5 py-1.5 rounded-lg border border-amber-200 text-amber-600 bg-amber-50 dark:bg-amber-900/10 dark:border-amber-800/40 hover:bg-amber-100 dark:hover:bg-amber-900/20 transition-colors">
                       <Star size={12} className="fill-amber-500" /> Avaliar

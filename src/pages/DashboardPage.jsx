@@ -580,7 +580,7 @@ export default function DashboardPage() {
                   )
                 ) : (
                   <div className="flex gap-2">
-                    {janta.status === 'Finalizado' && !myRatingsIds.has(janta.id) && janta.userStatus === 'Presente' && (
+                    {janta.status === 'Finalizado' && !myRatingsIds.has(janta.id) && (
                       <button 
                         onClick={() => setRatingEvent(janta)}
                         className="bg-amber-100 hover:bg-amber-200 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-[10px] font-bold px-3 py-1.5 rounded-lg transition-colors cursor-pointer flex items-center gap-1"
