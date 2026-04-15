@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Users, Utensils, Lock, Pencil, Eye, CheckCheck, XCircle, UserCog, Trash2, Receipt, MapPin } from 'lucide-react';
+import { Plus, Users, Utensils, Lock, Pencil, Eye, CheckCheck, XCircle, UserCog, Trash2, Receipt, MapPin, Star } from 'lucide-react';
 import { Card } from '../components/Card';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -9,6 +9,7 @@ import { EventDetailModal } from '../components/EventDetailModal';
 import { JustificativaModal } from '../components/JustificativaModal';
 import { AdminAttendanceModal } from '../components/AdminAttendanceModal';
 import { PaymentModal } from '../components/PaymentModal';
+import { RatingModal } from '../components/RatingModal';
 
 // Regra: o prazo de confirmação encerra no DIA ANTERIOR à janta às 16:00 BRT.
 const isEventPastDeadline = (eventDateStr) => {
@@ -50,14 +51,23 @@ export default function JantasPage() {
   const [ausenciasNoMes, setAusenciasNoMes] = useState(0);
   const LIMITE_AUSENCIAS = 3;
   const [paymentEvent, setPaymentEvent] = useState(null);
+  const [ratingEvent, setRatingEvent] = useState(null);
+  const [ratingLoading, setRatingLoading] = useState(false);
+  const [myRatingsIds, setMyRatingsIds] = useState(new Set());
 
   const fetchJantas = useCallback(async () => {
     if (!user?.id) return;
     try {
-      const { data, error } = await supabase
-        .from('events')
-        .select('*, attendances(user_id, status)')
-        .order('date', { ascending: false });
+      const [{ data, error }, { data: myRatings }] = await Promise.all([
+        supabase
+          .from('events')
+          .select('*, attendances(user_id, status)')
+          .order('date', { ascending: false }),
+        supabase
+          .from('ratings')
+          .select('event_id')
+          .eq('user_id', user.id)
+      ]);
 
       if (error) {
         console.error('Erro ao buscar jantas:', error);
@@ -81,6 +91,8 @@ export default function JantasPage() {
           ));
           toAutoClose.forEach(j => { j.status = 'Finalizado'; });
         }
+
+        setMyRatingsIds(new Set((myRatings || []).map(r => r.event_id)));
 
         const formattedJantas = data.map(j => {
           const presentes = j.attendances?.filter(a => a.status === 'Presente') || [];
@@ -175,6 +187,29 @@ export default function JantasPage() {
       alert('Erro ao registrar presença.');
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  const handleRatingSubmit = async ({ eventId, stars, comment }) => {
+    setRatingLoading(true);
+    try {
+      const { error } = await supabase
+        .from('ratings')
+        .insert({
+          event_id: eventId,
+          user_id: user.id,
+          stars,
+          comment
+        });
+
+      if (error) throw error;
+      setRatingEvent(null);
+      fetchJantas();
+    } catch (err) {
+      console.error('Erro ao avaliar:', err);
+      alert('Erro ao enviar avaliação. Tente novamente.');
+    } finally {
+      setRatingLoading(false);
     }
   };
 
@@ -340,11 +375,13 @@ export default function JantasPage() {
                   className="flex items-center gap-2 flex-wrap justify-end"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  {/* Ver */}
-                  <button onClick={() => setDetailEvent(janta)}
-                    className="flex items-center gap-1 text-[10px] font-bold px-2.5 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:border-zinc-400 transition-colors">
-                    <Eye size={12} /> Ver
-                  </button>
+                  {/* Avaliar (se concluida, não avaliada e presente) */}
+                  {janta.status === 'Finalizado' && !myRatingsIds.has(janta.id) && janta.userStatus === 'Presente' && (
+                    <button onClick={() => setRatingEvent(janta)}
+                      className="flex items-center gap-1 text-[10px] font-bold px-2.5 py-1.5 rounded-lg border border-amber-200 text-amber-600 bg-amber-50 dark:bg-amber-900/10 dark:border-amber-800/40 hover:bg-amber-100 dark:hover:bg-amber-900/20 transition-colors">
+                      <Star size={12} className="fill-amber-500" /> Avaliar
+                    </button>
+                  )}
 
                   {/* Editar */}
                   {canEdit(janta) && janta.status !== 'Cancelado' && (
@@ -479,6 +516,13 @@ export default function JantasPage() {
         onClose={() => setPaymentEvent(null)}
         event={paymentEvent}
         onSuccess={fetchJantas}
+      />
+      <RatingModal
+        isOpen={!!ratingEvent}
+        onClose={() => setRatingEvent(null)}
+        event={ratingEvent}
+        onSubmit={handleRatingSubmit}
+        loading={ratingLoading}
       />
     </div>
   );
