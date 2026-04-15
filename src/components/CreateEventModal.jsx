@@ -58,7 +58,7 @@ export const CreateEventModal = ({ isOpen, onClose, onSuccess }) => {
         .from('events')
         .insert([{ 
           name: name,
-          date: date, 
+          date: `${date}T20:00:00-03:00`, 
           location: location || null,
           responsibles: selectedResponsibles,
           status: 'Aberto',

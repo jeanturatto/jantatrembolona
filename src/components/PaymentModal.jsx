@@ -11,6 +11,7 @@ export const PaymentModal = ({ isOpen, onClose, event, onSuccess }) => {
   const [saving, setSaving] = useState(false);
   const [generatedMessage, setGeneratedMessage] = useState('');
   const [copied, setCopied] = useState(false);
+  const [selectedRecebedorId, setSelectedRecebedorId] = useState('');
 
   // Busca participantes e responsáveis ao abrir
   useEffect(() => {
@@ -48,6 +49,9 @@ export const PaymentModal = ({ isOpen, onClose, event, onSuccess }) => {
             .select('id, name, pix')
             .in('id', event.responsibles);
           setResponsaveis(respData || []);
+          if (respData && respData.length > 0) {
+            setSelectedRecebedorId(respData[0].id);
+          }
         }
 
         // Pre-preenche valor se já foi gerado antes
@@ -69,11 +73,9 @@ export const PaymentModal = ({ isOpen, onClose, event, onSuccess }) => {
   const perPerson = totalNum > 0 ? Math.ceil(totalNum / numPeople) : 0;
 
   const buildMessage = () => {
+    const recebedor = responsaveis.find(r => r.id === selectedRecebedorId) || responsaveis[0];
     const responsaveisNomes = responsaveis.map(r => r.name).filter(Boolean).join(' e ');
-    const pixLines = responsaveis
-      .filter(r => r.pix)
-      .map(r => `💳 PIX (${r.name}): ${r.pix}`)
-      .join('\n');
+    const pixLines = recebedor && recebedor.pix ? `💳 PIX (${recebedor.name}): ${recebedor.pix}` : '';
 
     const participantesStr = attendees.map(n => `❌ ${n}`).join('\n');
     const dateStr = event?.dateFormatted || event?.date || '';
@@ -89,7 +91,7 @@ export const PaymentModal = ({ isOpen, onClose, event, onSuccess }) => {
       participantesStr,
       '',
       `💰 Valor total: R$ ${totalNum.toFixed(2).replace('.', ',')}`,
-      `👥 Divisão: R$ ${perPerson},00 por pessoa (arredondado ↑)`,
+      `👥 Divisão: R$ ${perPerson},00 por pessoa`,
       pixLines ? `\n${pixLines}` : null,
     ].filter(l => l !== null).join('\n');
   };
@@ -202,7 +204,7 @@ export const PaymentModal = ({ isOpen, onClose, event, onSuccess }) => {
             <div className="flex items-center gap-3 p-4 bg-[#2842B5]/[0.06] dark:bg-[#2842B5]/10 border border-[#2842B5]/15 rounded-xl">
               <Calculator size={18} className="text-[#2842B5] dark:text-[#B8ABCF] shrink-0" />
               <div>
-                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Divisão (arredondado ↑)</p>
+                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Divisão</p>
                 <p className="text-2xl font-extrabold text-zinc-900 dark:text-white tracking-tight">
                   R$ {perPerson}<span className="text-sm font-medium text-zinc-400">,00 / pessoa</span>
                 </p>
@@ -216,20 +218,23 @@ export const PaymentModal = ({ isOpen, onClose, event, onSuccess }) => {
           {/* PIX dos responsáveis */}
           {responsaveis.length > 0 && (
             <div className="space-y-1.5">
-              <p className="text-[10px] font-bold uppercase text-zinc-400 tracking-wider">PIX para recebimento</p>
-              {responsaveis.map(r => (
-                <div key={r.id} className="flex items-center justify-between p-3 bg-zinc-50 dark:bg-zinc-800 rounded-xl border border-zinc-100 dark:border-zinc-700">
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-[10px] font-bold text-orange-600">
-                      {(r.name || 'R').charAt(0).toUpperCase()}
-                    </div>
-                    <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300">{r.name}</span>
-                  </div>
-                  <span className={`text-xs font-medium ${r.pix ? 'text-zinc-600 dark:text-zinc-300' : 'text-zinc-300 dark:text-zinc-600 italic'}`}>
-                    {r.pix || 'PIX não cadastrado'}
-                  </span>
+              <p className="text-[10px] font-bold uppercase text-zinc-400 tracking-wider">Conta para recebimento (PIX)</p>
+              <div className="relative">
+                <select 
+                  value={selectedRecebedorId}
+                  onChange={e => { setSelectedRecebedorId(e.target.value); setGeneratedMessage(''); }}
+                  className="w-full p-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:border-[#2842B5] dark:focus:border-white transition-all text-sm font-bold text-zinc-900 dark:text-white appearance-none"
+                >
+                  {responsaveis.map(r => (
+                    <option key={r.id} value={r.id}>
+                      {r.name} {r.pix ? `(${r.pix})` : '(Sem PIX)'}
+                    </option>
+                  ))}
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-zinc-400">
+                  ▼
                 </div>
-              ))}
+              </div>
             </div>
           )}
 

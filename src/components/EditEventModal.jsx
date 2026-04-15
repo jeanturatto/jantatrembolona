@@ -44,7 +44,7 @@ export const EditEventModal = ({ isOpen, onClose, onSuccess, event, isResponsibl
         .from('events')
         .update({
           name,
-          date,
+          date: `${date}T20:00:00-03:00`,
           location: location || null,
           responsibles: selectedResponsibles,
         })

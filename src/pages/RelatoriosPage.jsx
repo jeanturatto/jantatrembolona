@@ -26,8 +26,8 @@ export default function RelatoriosPage() {
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
   const [selectedUserForModal, setSelectedUserForModal] = useState(null);
   const now = new Date();
-  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState(now.getMonth());
+  const [selectedYear, setSelectedYear] = useState(Math.max(2026, now.getFullYear()));
+  const [selectedMonth, setSelectedMonth] = useState(now.getFullYear() === 2026 && now.getMonth() < 3 ? 3 : now.getMonth());
   const printRef = useRef(null);
 
   useEffect(() => {
@@ -220,20 +220,29 @@ export default function RelatoriosPage() {
       <Card className="flex flex-wrap gap-3 items-center">
         <span className="text-xs font-bold uppercase text-zinc-400">Período:</span>
         <div className="flex gap-2 flex-wrap">
-          {MONTHS.map((m, i) => (
-            <button key={m} onClick={() => setSelectedMonth(i)}
-              className={`text-xs font-bold px-3 py-1.5 rounded-lg border transition-colors ${
-                selectedMonth === i
-                  ? 'bg-zinc-900 text-white dark:bg-white dark:text-black border-transparent'
-                  : 'border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:border-zinc-400'
-              }`}>
-              {m.substring(0, 3)}
-            </button>
-          ))}
+          {MONTHS.map((m, i) => {
+            const isDisabled = (selectedYear === 2026 && i < 3) || (selectedYear === now.getFullYear() && i > now.getMonth());
+            return (
+              <button key={m} onClick={() => setSelectedMonth(i)}
+                disabled={isDisabled}
+                className={`text-xs font-bold px-3 py-1.5 rounded-lg border transition-colors ${
+                  isDisabled ? 'opacity-30 cursor-not-allowed border-zinc-100 text-zinc-300 dark:border-zinc-800 dark:text-zinc-600' :
+                  selectedMonth === i
+                    ? 'bg-zinc-900 text-white dark:bg-white dark:text-black border-transparent'
+                    : 'border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:border-zinc-400'
+                }`}>
+                {m.substring(0, 3)}
+              </button>
+            );
+          })}
         </div>
         <div className="flex gap-2">
-          {years.map(y => (
-            <button key={y} onClick={() => setSelectedYear(y)}
+          {years.filter(y => y >= 2026).map(y => (
+            <button key={y} onClick={() => {
+              setSelectedYear(y);
+              if (y === 2026 && selectedMonth < 3) setSelectedMonth(3);
+              if (y === now.getFullYear() && selectedMonth > now.getMonth()) setSelectedMonth(now.getMonth());
+            }}
               className={`text-xs font-bold px-3 py-1.5 rounded-lg border transition-colors ${
                 selectedYear === y
                   ? 'bg-zinc-900 text-white dark:bg-white dark:text-black border-transparent'

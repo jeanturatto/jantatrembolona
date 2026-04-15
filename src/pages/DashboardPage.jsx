@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Calendar, Users, Percent, AlertCircle, Utensils, Lock, Star, Cake, CheckCircle2, XCircle, Trophy } from 'lucide-react';
+import { Calendar, Users, Percent, AlertCircle, Utensils, Lock, Star, Cake, CheckCircle2, XCircle, Trophy, MapPin } from 'lucide-react';
 import { Card } from '../components/Card';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -50,6 +50,7 @@ export default function DashboardPage() {
   const [ratingEvent, setRatingEvent] = useState(null);
   const [ratingLoading, setRatingLoading] = useState(false);
   const [pendingRatingEvent, setPendingRatingEvent] = useState(null);
+  const [myRatingsIds, setMyRatingsIds] = useState(new Set());
   // Payment modal (responsaveis)
   const [pendingPaymentEvent, setPendingPaymentEvent] = useState(null);
   const [paymentModalEvent, setPaymentModalEvent] = useState(null);
@@ -105,6 +106,7 @@ export default function DashboardPage() {
 
       // ── Ranking: top 3 jantas finalizadas do ano com avaliações
       const ratedEventIds = new Set((myRatings || []).map(r => r.event_id));
+      setMyRatingsIds(ratedEventIds);
       const ranked = (finishedEvents || [])
         .filter(e => e.ratings?.length >= 1)
         .map(e => ({
@@ -565,7 +567,7 @@ export default function DashboardPage() {
                   )
                 ) : (
                   <div className="flex gap-2">
-                    {janta.status === 'Finalizado' && janta.userStatus === 'Presente' && (
+                    {janta.status === 'Finalizado' && !myRatingsIds.has(janta.id) && janta.userStatus === 'Presente' && (
                       <button 
                         onClick={() => setRatingEvent(janta)}
                         className="bg-amber-100 hover:bg-amber-200 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-[10px] font-bold px-3 py-1.5 rounded-lg transition-colors cursor-pointer flex items-center gap-1"
