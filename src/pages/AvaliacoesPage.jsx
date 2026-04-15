@@ -38,13 +38,29 @@ export default function AvaliacoesPage() {
             id,
             stars,
             comment,
-            created_at
+            created_at,
+            user_id
           )
         `)
         .eq('status', 'Finalizado')
         .order('date', { ascending: false });
 
       if (error) throw error;
+
+      // Coleta todos os user_ids únicos das avaliações
+      const allUserIds = [...new Set(
+        (data || []).flatMap(e => (e.ratings || []).map(r => r.user_id)).filter(Boolean)
+      )];
+
+      // Busca nomes e avatares em batch
+      let profileMap = {};
+      if (allUserIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, name, avatar_url')
+          .in('id', allUserIds);
+        profileMap = Object.fromEntries((profiles || []).map(p => [p.id, p]));
+      }
 
       const formatted = (data || [])
         .filter(e => e.ratings?.length > 0)
@@ -54,6 +70,13 @@ export default function AvaliacoesPage() {
             ...e,
             avgStars: avg,
             totalRatings: e.ratings.length,
+            // Enriquece cada rating com o perfil do avaliador
+            ratings: e.ratings.map(r => ({
+              ...r,
+              reviewerName: profileMap[r.user_id]?.name || 'Usuário',
+              reviewerAvatar: profileMap[r.user_id]?.avatar_url || null,
+              reviewerInitial: (profileMap[r.user_id]?.name || 'U').charAt(0).toUpperCase(),
+            })),
             dateFormatted: new Date(e.date).toLocaleDateString('pt-BR', {
               weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
             }),
@@ -174,15 +197,22 @@ export default function AvaliacoesPage() {
                     .slice()
                     .sort((a, b) => b.stars - a.stars)
                     .map(rating => (
-                      <div key={rating.id} className="flex items-start gap-3 px-5 py-4">
-                        {/* Estrelas da avaliação */}
-                        <div className="shrink-0 mt-0.5">
-                          <StarDisplay value={rating.stars} size={12} />
+                      <div key={rating.id} className="flex items-start gap-3 px-4 py-4">
+
+                        {/* Avatar do avaliador */}
+                        <div className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-700 flex items-center justify-center text-[11px] font-bold text-zinc-600 dark:text-zinc-200 shrink-0 overflow-hidden border border-zinc-200 dark:border-zinc-600">
+                          {rating.reviewerAvatar
+                            ? <img src={rating.reviewerAvatar} alt={rating.reviewerInitial} className="w-full h-full object-cover" />
+                            : rating.reviewerInitial}
                         </div>
 
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs font-bold text-zinc-600 dark:text-zinc-300">
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mb-1">
+                            <span className="text-xs font-bold text-zinc-800 dark:text-zinc-100">
+                              {rating.reviewerName}
+                            </span>
+                            <StarDisplay value={rating.stars} size={11} />
+                            <span className="text-[10px] font-bold text-zinc-500">
                               {LABELS[rating.stars]}
                             </span>
                             <span className="text-[10px] text-zinc-400">

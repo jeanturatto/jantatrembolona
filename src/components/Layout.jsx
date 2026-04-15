@@ -207,17 +207,71 @@ export default function Layout() {
       </aside>
 
       {/* ── MAIN CONTENT ── */}
-      <main className="flex-1 md:ml-60 pt-16 md:pt-0 w-full max-w-full overflow-x-hidden">
+      <main className="flex-1 md:ml-60 pt-16 md:pt-0 pb-24 md:pb-0 w-full max-w-full overflow-x-hidden min-h-0">
         <div className="dark:dot-grid min-h-[100dvh]">
-          <div className="w-full max-w-5xl mx-auto px-4 md:px-8 py-6 md:py-8 h-full flex flex-col">
+          <div className="w-full max-w-5xl mx-auto px-4 md:px-8 py-5 md:py-8 h-full flex flex-col">
             <Outlet />
           </div>
         </div>
       </main>
 
+      {/* ── MOBILE BOTTOM NAV ── */}
+      <nav
+        className="md:hidden fixed bottom-0 inset-x-0 z-40
+          bg-white/95 dark:bg-[#0b0b1e]/95 backdrop-blur-xl
+          border-t border-zinc-100 dark:border-white/[0.06]
+          flex items-stretch"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
+        {[
+          ...navItems,
+          { to: '/profile', label: 'Perfil', icon: User, isProfileBtn: true },
+          ...(isAdmin ? [{ to: '/admin', label: 'Admin', icon: Settings }] : []),
+        ].map(item => {
+          if (item.isProfileBtn) {
+            return (
+              <button
+                key="profile"
+                onClick={() => setIsProfileOpen(true)}
+                className="flex-1 flex flex-col items-center justify-center gap-0.5 py-3 text-zinc-400 dark:text-zinc-500 active:bg-zinc-100 dark:active:bg-white/[0.05] transition-colors min-w-0"
+              >
+                <div className="w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-orange-600 font-bold text-xs overflow-hidden">
+                  {profile?.avatar_url
+                    ? <img src={profile.avatar_url} alt="av" className="w-full h-full object-cover" />
+                    : userInitial}
+                </div>
+                <span className="text-[9px] font-bold tracking-wide truncate max-w-full px-1">Perfil</span>
+              </button>
+            );
+          }
+          return (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.end}
+              onClick={() => setIsMobileMenuOpen(false)}
+              className={({ isActive }) =>
+                `flex-1 flex flex-col items-center justify-center gap-0.5 py-3 transition-colors min-w-0 active:bg-zinc-100 dark:active:bg-white/[0.05] ${
+                  isActive
+                    ? 'text-[#2842B5] dark:text-white'
+                    : 'text-zinc-400 dark:text-zinc-500'
+                }`
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  <item.icon size={20} strokeWidth={isActive ? 2.5 : 2} />
+                  <span className={`text-[9px] font-bold tracking-wide truncate max-w-full px-1 ${isActive ? 'text-[#2842B5] dark:text-white' : ''}`}>{item.label}</span>
+                </>
+              )}
+            </NavLink>
+          );
+        })}
+      </nav>
+
       {/* ── TOAST ── */}
       {toast && (
-        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] px-5 py-3 rounded-xl text-sm font-semibold shadow-2xl animate-in fade-in tracking-tight border ${
+        <div className={`fixed bottom-24 md:bottom-6 left-1/2 -translate-x-1/2 z-[100] px-5 py-3 rounded-xl text-sm font-semibold shadow-2xl animate-in fade-in tracking-tight border ${
           toast.type === 'error'
             ? 'bg-red-600 text-white border-red-500/30'
             : 'bg-[#2842B5] text-white border-[#2842B5]/50 shadow-[#2842B5]/25'

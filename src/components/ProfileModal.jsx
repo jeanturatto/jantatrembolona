@@ -90,14 +90,14 @@ export const ProfileModal = ({ isOpen, onClose, user, profile, onSave }) => {
     setSaveError('');
     setSaveSuccess('');
 
-    // Validações de senha
-    const wantsChangePassword = newPassword.length > 0;
+    // Validações de senha — qualquer campo preenchido ativa a troca
+    const wantsChangePassword = oldPassword.length > 0 || newPassword.length > 0 || confirmPassword.length > 0;
     if (wantsChangePassword) {
       if (!oldPassword) {
         setSaveError('Para alterar a senha, informe a senha atual.');
         return;
       }
-      if (newPassword.length < 6) {
+      if (!newPassword || newPassword.length < 6) {
         setSaveError('A nova senha deve ter no mínimo 6 caracteres.');
         return;
       }
@@ -227,7 +227,7 @@ export const ProfileModal = ({ isOpen, onClose, user, profile, onSave }) => {
             <label className={labelClass}>E-mail</label>
             <input readOnly value={user?.email || ''} className={inputReadOnly} />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
               <label className={labelClass}>Telefone</label>
               <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="(00) 00000-0000" className={inputClass} disabled={saving} />
@@ -258,6 +258,20 @@ export const ProfileModal = ({ isOpen, onClose, user, profile, onSave }) => {
               <span className="text-[10px] text-zinc-400">(opcional)</span>
             </div>
 
+            {/* 1º — Senha Atual */}
+            <div className="space-y-1">
+              <label className={labelClass}>Senha Atual</label>
+              <input
+                type="password"
+                value={oldPassword}
+                onChange={e => { setOldPassword(e.target.value); setSaveError(''); }}
+                placeholder="Digite sua senha atual"
+                className={inputClass}
+                disabled={saving}
+              />
+            </div>
+
+            {/* 2º — Nova Senha */}
             <div className="space-y-1">
               <label className={labelClass}>Nova Senha</label>
               <input
@@ -269,35 +283,25 @@ export const ProfileModal = ({ isOpen, onClose, user, profile, onSave }) => {
                 disabled={saving}
               />
             </div>
-            {newPassword && (
-              <>
-                <div className="space-y-1">
-                  <label className={labelClass}>Senha Atual (obrigatória para confirmar)</label>
-                  <input
-                    type="password"
-                    value={oldPassword}
-                    onChange={e => { setOldPassword(e.target.value); setSaveError(''); }}
-                    placeholder="Digite sua senha atual"
-                    className={inputClass}
-                    disabled={saving}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className={labelClass}>Confirmar Nova Senha</label>
-                  <input
-                    type="password"
-                    value={confirmPassword}
-                    onChange={e => { setConfirmPassword(e.target.value); setSaveError(''); }}
-                    placeholder="Repita a nova senha"
-                    className={inputClass}
-                    disabled={saving}
-                  />
-                  {confirmPassword && !passwordsMatch && (
-                    <p className="text-[10px] font-bold text-red-500 mt-1">As senhas não coincidem.</p>
-                  )}
-                </div>
-              </>
-            )}
+
+            {/* 3º — Confirmar Nova Senha */}
+            <div className="space-y-1">
+              <label className={labelClass}>Confirmar Nova Senha</label>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={e => { setConfirmPassword(e.target.value); setSaveError(''); }}
+                placeholder="Repita a nova senha"
+                className={inputClass}
+                disabled={saving}
+              />
+              {confirmPassword && !passwordsMatch && (
+                <p className="text-[10px] font-bold text-red-500 mt-1">As senhas não coincidem.</p>
+              )}
+              {confirmPassword && passwordsMatch && newPassword.length >= 6 && (
+                <p className="text-[10px] font-bold text-green-600 mt-1">✓ Senhas coincidem</p>
+              )}
+            </div>
           </div>
         </div>
 

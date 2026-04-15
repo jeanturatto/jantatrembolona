@@ -403,14 +403,14 @@ export default function DashboardPage() {
       </header>
 
       {/* ── Stats Grid (Mockup Style) ── */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <Card className="md:col-span-2 !p-6 flex flex-col justify-between h-32 relative overflow-hidden">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-8">
+        <Card className="col-span-2 !p-5 md:!p-6 flex flex-col justify-between h-28 md:h-32 relative overflow-hidden">
           <span className="text-[10px] font-extrabold text-zinc-400 dark:text-[#5a5a80] tracking-widest uppercase">Média de Presença</span>
-          <span className="text-5xl font-extrabold text-zinc-900 dark:text-white tracking-tighter -ml-1">
+          <span className="text-4xl md:text-5xl font-extrabold text-zinc-900 dark:text-white tracking-tighter -ml-1">
             {stats.presencaMedia}
           </span>
           {/* Placeholder graph */}
-          <div className="absolute right-6 bottom-4 flex items-end gap-1">
+          <div className="absolute right-5 bottom-4 flex items-end gap-1">
             <span className="text-[8px] absolute -top-4 right-0 text-zinc-400 whitespace-nowrap">ÚLTIMOS 30 DIAS</span>
             <div className="w-1.5 h-6 bg-zinc-200 dark:bg-white/10 rounded-full"></div>
             <div className="w-1.5 h-8 bg-zinc-900 dark:bg-white rounded-full"></div>
@@ -419,20 +419,20 @@ export default function DashboardPage() {
           </div>
         </Card>
         
-        <Card className="!bg-zinc-900 dark:!bg-black border-none !p-6 flex flex-col justify-between h-32">
+        <Card className="!bg-zinc-900 dark:!bg-black border-none !p-5 md:!p-6 flex flex-col justify-between h-28 md:h-32">
           <span className="text-[10px] font-extrabold text-zinc-400 tracking-widest uppercase">Jantas Abertas</span>
-          <span className="text-5xl font-extrabold text-white tracking-tighter -ml-1">
+          <span className="text-4xl md:text-5xl font-extrabold text-white tracking-tighter -ml-1">
             {String(jantas.filter(j => j.status === 'Aberto').length).padStart(2, '0')}
           </span>
-          <span className="text-[10px] text-zinc-400 font-medium">Confirme sua presença até amanhã</span>
+          <span className="text-[10px] text-zinc-400 font-medium hidden sm:block">Confirme sua presença</span>
         </Card>
 
-        <Card className="!p-6 flex flex-col justify-between h-32">
-          <span className="text-[10px] font-extrabold text-zinc-400 dark:text-[#5a5a80] tracking-widest uppercase">Total do Mês</span>
-          <span className="text-5xl font-extrabold text-zinc-900 dark:text-white tracking-tighter -ml-1">
+        <Card className="!p-5 md:!p-6 flex flex-col justify-between h-28 md:h-32">
+          <span className="text-[10px] font-extrabold text-zinc-400 dark:text-[#5a5a80] tracking-widest uppercase">Total do Ano</span>
+          <span className="text-4xl md:text-5xl font-extrabold text-zinc-900 dark:text-white tracking-tighter -ml-1">
             {String(stats.totalJantas).padStart(2, '0')}
           </span>
-          <span className="text-[10px] text-zinc-400 font-medium">Meta: {jantas.length + 5} jantas</span>
+          <span className="text-[10px] text-zinc-400 font-medium hidden sm:block">Meta: {jantas.length + 5} jantas</span>
         </Card>
       </div>
 
@@ -535,7 +535,13 @@ export default function DashboardPage() {
 
           </Card>
         ))}
-        {jantas.length === 0 && !loading && (
+        {jantas.filter(j => {
+             if (activeTab === 'Todas') return true;
+             if (activeTab === 'Abertas') return j.status === 'Aberto';
+             if (activeTab === 'Fechadas') return j.status === 'Fechado';
+             if (activeTab === 'Concluídas') return j.status === 'Finalizado';
+             return true;
+          }).length === 0 && !loading && (
           <p className="text-sm text-zinc-400 dark:text-[#5a5a80] py-4 text-center md:col-span-2">Nenhuma janta encontrada nos filtros atuais.</p>
         )}
       </div>
@@ -594,13 +600,26 @@ export default function DashboardPage() {
       {/* ── Jantas Recentes ── */}
       <section className="space-y-3">
         <div className="flex justify-between items-center">
-          <h2 className="text-base font-semibold text-zinc-900 dark:text-white tracking-tight">Jantas Recentes</h2>
+          <h2 className="text-base font-semibold text-zinc-900 dark:text-white tracking-tight">
+            {activeTab === 'Todas' ? 'Todas as Jantas' :
+             activeTab === 'Abertas' ? 'Jantas Abertas' :
+             activeTab === 'Fechadas' ? 'Jantas Fechadas' :
+             'Jantas Concluídas'}
+          </h2>
           <Link to="/jantas" className="text-xs font-medium text-[#2842B5] dark:text-[#B8ABCF] hover:underline underline-offset-2">
             Ver todas →
           </Link>
         </div>
         <div className="space-y-2">
-          {jantas.map(janta => (
+          {jantas
+            .filter(j => {
+              if (activeTab === 'Todas') return true;
+              if (activeTab === 'Abertas') return j.status === 'Aberto';
+              if (activeTab === 'Fechadas') return j.status === 'Fechado';
+              if (activeTab === 'Concluídas') return j.status === 'Finalizado';
+              return true;
+            })
+            .map(janta => (
             <Card
               key={janta.id}
               onClick={() => setDetailEvent(janta)}
@@ -618,14 +637,22 @@ export default function DashboardPage() {
               <span className={`text-[10px] font-semibold uppercase px-2.5 py-1 rounded-full border shrink-0 ml-2 tracking-wide ${
                 janta.status === 'Aberto'
                   ? 'bg-[#2842B5]/08 border-[#2842B5]/20 text-[#2842B5] dark:bg-[#2842B5]/15 dark:border-[#2842B5]/30 dark:text-[#B8ABCF]'
+                  : janta.status === 'Fechado'
+                  ? 'bg-amber-50 border-amber-200 text-amber-600 dark:bg-amber-500/10 dark:border-amber-500/20 dark:text-amber-400'
                   : 'bg-zinc-50 dark:bg-white/[0.03] border-zinc-100 dark:border-white/[0.05] text-zinc-400 dark:text-[#5a5a80]'
               }`}>
-                {janta.status}
+                {janta.status === 'Finalizado' ? 'Concluída' : janta.status === 'Fechado' ? 'Fechada' : janta.status}
               </span>
             </Card>
           ))}
-          {jantas.length === 0 && (
-            <p className="text-sm text-zinc-400 dark:text-[#5a5a80] py-4 text-center">Nenhuma janta registrada ainda.</p>
+          {jantas.filter(j => {
+              if (activeTab === 'Todas') return true;
+              if (activeTab === 'Abertas') return j.status === 'Aberto';
+              if (activeTab === 'Fechadas') return j.status === 'Fechado';
+              if (activeTab === 'Concluídas') return j.status === 'Finalizado';
+              return true;
+            }).length === 0 && (
+            <p className="text-sm text-zinc-400 dark:text-[#5a5a80] py-4 text-center">Nenhuma janta nesta categoria.</p>
           )}
         </div>
       </section>
