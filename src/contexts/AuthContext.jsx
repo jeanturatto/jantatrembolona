@@ -147,6 +147,13 @@ export const AuthProvider = ({ children }) => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Versão "force" que reseta o guard antes de buscar — usada após troca de senha
+  // para garantir que não fique preso no profileFetchingRef
+  const forceRefreshProfile = useCallback(async (userId) => {
+    profileFetchingRef.current = false;
+    return refreshProfile(userId);
+  }, [refreshProfile]);
+
   useEffect(() => {
     mountedRef.current = true;
 
@@ -399,7 +406,7 @@ export const AuthProvider = ({ children }) => {
   const isAdmin = profile?.role === 'ADMIN' || profile?.role === 'admin';
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, profileLoading, signIn, signUp, signOut, isAdmin, refreshProfile }}>
+    <AuthContext.Provider value={{ user, profile, loading, profileLoading, signIn, signUp, signOut, isAdmin, refreshProfile, forceRefreshProfile }}>
       {loading ? (
         <div className="min-h-screen bg-zinc-50 dark:bg-black flex flex-col items-center justify-center gap-3">
           <div className="animate-spin h-8 w-8 border-4 border-zinc-900 border-t-transparent rounded-full dark:border-white dark:border-t-transparent"></div>

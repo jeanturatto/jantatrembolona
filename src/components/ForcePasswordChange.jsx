@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { Lock } from 'lucide-react';
 
 export default function ForcePasswordChange() {
-  const { user, signOut, refreshProfile } = useAuth();
+  const { user, signOut, forceRefreshProfile } = useAuth();
   const navigate = useNavigate();
   const [oldPassword, setOldPassword] = useState('');
   const [password, setPassword] = useState('');
@@ -49,11 +49,9 @@ export default function ForcePasswordChange() {
         throw new Error('A senha provisória informada está incorreta. Use exatamente a senha que o administrador definiu.');
       }
 
-      // 2. Atualizar a senha no Supabase Auth
-      const { error: updateError } = await supabase.auth.updateUser({ password });
-      if (updateError) throw updateError;
-
-      // 3. Remover a flag must_change_password do profile
+      // 2. Remover flag must_change_password ANTES de atualizar a senha
+      // Garante que quando USER_UPDATED disparar no Supabase e chamar refreshProfile,
+      // já vai encontrar must_change_password = false no banco
       const { error: profileError } = await supabase
         .from('profiles')
         .update({ must_change_password: false })
@@ -61,13 +59,16 @@ export default function ForcePasswordChange() {
 
       if (profileError) throw profileError;
 
+      // 3. Atualizar a senha no Supabase Auth (dispara USER_UPDATED)
+      const { error: updateError } = await supabase.auth.updateUser({ password });
+      if (updateError) throw updateError;
+
       setSuccess('Senha alterada com sucesso! Entrando no sistema...');
 
-      // 4. Atualiza o profile em memória (remove must_change_password do state)
-      // Isso faz o ProtectedRoute deixar de mostrar esta tela
-      await refreshProfile(user.id);
+      // 4. Força refresh do profile (reseta qualquer guard preso) para garantir state atualizado
+      await forceRefreshProfile(user.id);
 
-      // 5. Navega para o dashboard (o ProtectedRoute já não vai mais redirecionar aqui)
+      // 5. Navega para o dashboard
       setTimeout(() => {
         navigate('/', { replace: true });
       }, 600);

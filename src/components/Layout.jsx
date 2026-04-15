@@ -1,30 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet } from 'react-router-dom';
 import {
   LayoutDashboard,
   Calendar,
   BarChart3,
+  Star,
   User,
   Settings,
   LogOut,
   Utensils,
-  ChevronRight,
   Menu,
   X,
-  Bell,
-  Plus,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { ProfileModal } from './ProfileModal';
-import { CreateEventModal } from './CreateEventModal';
 import { supabase } from '../lib/supabase';
 
 export default function Layout() {
   const { user, profile, isAdmin, signOut } = useAuth();
-  const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [isCreateOpen, setIsCreateOpen] = useState(false); // New state for New Entry button
   const [appConfig, setAppConfig] = useState({ name: 'Janta', subtitle: 'TREMBOLONA ELITE', iconUrl: '' });
   const [toast, setToast] = useState(null);
 
@@ -54,6 +49,7 @@ export default function Layout() {
   const navItems = [
     { to: '/', label: 'Início',     icon: LayoutDashboard, end: true },
     { to: '/jantas', label: 'Jantas', icon: Calendar },
+    { to: '/avaliacoes', label: 'Avaliações', icon: Star },
     ...(isAdmin ? [{ to: '/relatorios', label: 'Relatórios', icon: BarChart3 }] : []),
   ];
 
@@ -182,15 +178,8 @@ export default function Layout() {
 
         {/* User footer + New Entry */}
         <div className="px-6 py-6 mt-auto">
-          {isAdmin && (
-            <button
-              onClick={() => setIsCreateOpen(true)}
-              className="w-full bg-zinc-900 dark:bg-white text-white dark:text-black py-3 rounded-[0.85rem] font-semibold text-sm mb-4 flex items-center justify-center gap-2 transition-transform active:scale-[0.98] hover:opacity-90"
-            >
-              + New Entry
-            </button>
-          )}
-          
+
+
           <div className="bg-white dark:bg-[#121226] border border-zinc-100 dark:border-white/[0.06] shadow-sm rounded-xl p-3 flex flex-col gap-0 cursor-pointer hover:bg-zinc-50 dark:hover:bg-white/[0.02]" onClick={() => setIsProfileOpen(true)}>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-orange-600 font-bold shrink-0 overflow-hidden">
@@ -243,12 +232,6 @@ export default function Layout() {
         user={user}
         profile={profile}
         onSave={handleProfileSave}
-      />
-      
-      <CreateEventModal
-        isOpen={isCreateOpen}
-        onClose={() => setIsCreateOpen(false)}
-        onSuccess={() => { window.dispatchEvent(new Event('dashboard_refresh')); }}
       />
     </div>
   );

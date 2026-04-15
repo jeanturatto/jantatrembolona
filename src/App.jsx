@@ -8,6 +8,7 @@ import DashboardPage from './pages/DashboardPage';
 import JantasPage from './pages/JantasPage';
 import RelatoriosPage from './pages/RelatoriosPage';
 import AdminPage from './pages/AdminPage';
+import AvaliacoesPage from './pages/AvaliacoesPage';
 import ForcePasswordChange from './components/ForcePasswordChange';
 
 class GlobalErrorBoundary extends React.Component {
@@ -62,6 +63,7 @@ export default function App() {
             <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
               <Route index element={<DashboardPage />} />
               <Route path="jantas" element={<JantasPage />} />
+              <Route path="avaliacoes" element={<AvaliacoesPage />} />
               <Route path="relatorios" element={<RelatoriosPage />} />
               <Route path="admin" element={
                 <ProtectedRoute requireAdmin={true}>

@@ -71,7 +71,7 @@ export default function DashboardPage() {
         supabase.from('profiles').select('*', { count: 'exact', head: true }),
         supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('inadimplente', true),
         supabase.from('attendances').select('*').eq('user_id', user.id),
-        supabase.from('profiles').select('id, name, email'),
+        supabase.from('profiles').select('id, name, email, avatar_url'),
         supabase.from('profiles').select('id, name, avatar_url, data_nascimento').not('data_nascimento', 'is', null),
         supabase.from('events').select('id, name, date, responsibles, ratings(stars, comment)').eq('status', 'Finalizado').gte('date', `${currentYear}-01-01`).lte('date', today),
         supabase.from('ratings').select('event_id').eq('user_id', user.id),
@@ -129,7 +129,12 @@ export default function DashboardPage() {
       }
 
       if (jantasData) {
-        const profileMap = Object.fromEntries((allProfiles || []).map(p => [p.id, p.name || p.email?.split('@')[0]]));
+        const profileMap = Object.fromEntries(
+          (allProfiles || []).map(p => [p.id, {
+            name: p.name || p.email?.split('@')[0] || 'U',
+            avatar_url: p.avatar_url || null,
+          }])
+        );
 
         const formattedJantas = jantasData.map(j => {
           const presentes = j.attendances?.filter(a => a.status === 'Presente') || [];
@@ -153,7 +158,13 @@ export default function DashboardPage() {
             responsiveisNomes: responsiveisNomes || 'Nenhum responsável',
             responsibles: j.responsibles || [],
             attendees: presentes.length,
-            attendeesList: presentes.slice(0, 3).map(a => profileMap[a.user_id] || 'U'),
+            // Lista com nome, avatar e inicial dos primeiros 3 presentes
+            attendeesList: presentes.slice(0, 3).map(a => ({
+              name: profileMap[a.user_id]?.name || 'U',
+              avatar_url: profileMap[a.user_id]?.avatar_url || null,
+              initial: (profileMap[a.user_id]?.name || 'U').charAt(0).toUpperCase(),
+            })),
+            responsiveisNomes: (j.responsibles || []).map(id => profileMap[id]?.name).filter(Boolean).join(', ') || 'Nenhum responsável',
             userStatus: userAtt ? userAtt.status : null
           };
         });
@@ -459,9 +470,11 @@ export default function DashboardPage() {
                 <div>
                   <span className="text-[8px] font-extrabold text-zinc-400 uppercase tracking-widest mb-1 block">Participantes</span>
                   <div className="flex -space-x-1.5 items-center">
-                    {janta.attendees > 0 ? Array.from({length: Math.min(3, janta.attendees)}).map((_, i) => (
-                       <div key={i} className="w-6 h-6 rounded-full border-2 border-white bg-green-100 overflow-hidden ring-1 ring-zinc-100">
-                         <img src={`https://ui-avatars.com/api/?name=User&background=random`} alt="av" />
+                    {janta.attendees > 0 ? janta.attendeesList.map((att, i) => (
+                       <div key={i} className="w-6 h-6 rounded-full border-2 border-white dark:border-zinc-900 bg-green-100 dark:bg-green-900/40 overflow-hidden ring-1 ring-zinc-100 dark:ring-zinc-700 text-[9px] font-bold text-green-700 dark:text-green-300 flex items-center justify-center">
+                         {att.avatar_url
+                           ? <img src={att.avatar_url} alt={att.initial} className="w-full h-full object-cover" />
+                           : att.initial}
                        </div>
                     )) : (
                        <span className="text-xs text-zinc-400 font-medium">Nenhum</span>
