@@ -131,12 +131,12 @@ export const AdminUserModal = ({ isOpen, onClose, targetUser, onSuccess, initial
           {/* Password Reset Section */}
           <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800">
             <label className={labelClass}>Redefinir Senha</label>
-            <p className="text-[10px] text-zinc-400 mb-2">Deixe em branco para não alterar. Ao salvar com senha, um email de redefinição será enviado ao usuário.</p>
+            <p className="text-[10px] text-zinc-400 mb-2">Deixe em branco para não alterar. Ao salvar com nova senha, o usuário será obrigado a criar uma nova senha no próximo login.</p>
             <input
               type="password"
               value={newPassword}
               onChange={e => setNewPassword(e.target.value)}
-              placeholder="Nova senha (mín. 6 caracteres)"
+              placeholder="Nova senha provisória (mín. 6 caracteres)"
               className={inputClass}
             />
             {newPassword.length > 0 && newPassword.length < 6 && (

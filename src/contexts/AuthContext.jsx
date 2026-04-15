@@ -88,14 +88,20 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(false);
   const profileFetchingRef = useRef(false);
   const mountedRef = useRef(true);
   const initDoneRef = useRef(false);
+  const currentUserIdRef = useRef(null);
 
   const refreshProfile = useCallback(async (userId) => {
     if (!userId || !mountedRef.current) return;
+    // Evita fetches paralelos para o MESMO usuário
     if (profileFetchingRef.current) return;
+
     profileFetchingRef.current = true;
+    if (mountedRef.current) setProfileLoading(true);
+
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -121,18 +127,24 @@ export const AuthProvider = ({ children }) => {
       if (mountedRef.current) setProfile(data);
     } catch (error) {
       console.error('Error fetching profile:', error);
-      if (mountedRef.current) {
+      // Em caso de erro de rede, mantém o profile atual se já existir
+      // Só define fallback se não há profile ainda
+      if (mountedRef.current && !profile) {
         setProfile({
           name: 'Usuário',
           role: 'USER',
           faltas_nao_justificadas: 0,
           inadimplente: false,
           blocked: false,
+          must_change_password: false,
         });
       }
     } finally {
+      // SEMPRE reseta o ref, independente de sucesso ou erro
       profileFetchingRef.current = false;
+      if (mountedRef.current) setProfileLoading(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -142,6 +154,8 @@ export const AuthProvider = ({ children }) => {
     const fallbackTimer = setTimeout(() => {
       if (mountedRef.current && !initDoneRef.current) {
         console.warn('AuthContext: fallback timer triggered');
+        profileFetchingRef.current = false;
+        setProfileLoading(false);
         setLoading(false);
         initDoneRef.current = true;
       }
@@ -173,6 +187,7 @@ export const AuthProvider = ({ children }) => {
 
         if (session?.user) {
           if (mountedRef.current) {
+            currentUserIdRef.current = session.user.id;
             setUser(session.user);
             await refreshProfile(session.user.id);
           }
@@ -191,6 +206,8 @@ export const AuthProvider = ({ children }) => {
       } finally {
         if (mountedRef.current) {
           clearTimeout(fallbackTimer);
+          profileFetchingRef.current = false;
+          setProfileLoading(false);
           setLoading(false);
           initDoneRef.current = true;
         }
@@ -207,8 +224,11 @@ export const AuthProvider = ({ children }) => {
 
       if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
         clearAllSessions();
+        currentUserIdRef.current = null;
         setUser(null);
         setProfile(null);
+        setProfileLoading(false);
+        profileFetchingRef.current = false;
         if (initDoneRef.current) setLoading(false);
         return;
       }
@@ -218,12 +238,23 @@ export const AuthProvider = ({ children }) => {
         if (mountedRef.current) {
           if (currentUser) {
             setUser(currentUser);
-            if (!profileFetchingRef.current) {
-              await refreshProfile(currentUser.id);
+            // Sempre faz refresh do profile quando o evento indica mudança de usuário
+            // ou quando o profile ainda não foi carregado para este usuário
+            const userChanged = currentUserIdRef.current !== currentUser.id;
+            currentUserIdRef.current = currentUser.id;
+
+            if (userChanged || !profileFetchingRef.current) {
+              // Se initDoneRef ainda for false (inicialização em andamento),
+              // aguardamos ela terminar — ela já cuida do refreshProfile.
+              // Só agimos se já inicializamos.
+              if (initDoneRef.current) {
+                await refreshProfile(currentUser.id);
+              }
             }
           } else {
             setUser(null);
             setProfile(null);
+            currentUserIdRef.current = null;
           }
           if (initDoneRef.current) setLoading(false);
         }
@@ -234,10 +265,14 @@ export const AuthProvider = ({ children }) => {
       const currentUser = session?.user || null;
       if (mountedRef.current) {
         setUser(currentUser);
-        if (currentUser && !profileFetchingRef.current) {
-          await refreshProfile(currentUser.id);
-        } else if (!currentUser) {
+        if (currentUser) {
+          currentUserIdRef.current = currentUser.id;
+          if (!profileFetchingRef.current && initDoneRef.current) {
+            await refreshProfile(currentUser.id);
+          }
+        } else {
           setProfile(null);
+          currentUserIdRef.current = null;
         }
         if (initDoneRef.current) setLoading(false);
       }
@@ -266,11 +301,14 @@ export const AuthProvider = ({ children }) => {
         if (!session && mountedRef.current) {
           setUser(null);
           setProfile(null);
+          currentUserIdRef.current = null;
         } else if (session?.user && mountedRef.current) {
           setUser(session.user);
-          if (!profileFetchingRef.current) {
-            await refreshProfile(session.user.id);
-          }
+          currentUserIdRef.current = session.user.id;
+          // SEMPRE atualiza o profile ao voltar ao foco para detectar mudanças externas
+          // (ex: admin bloqueou, admin mudou senha, etc.)
+          profileFetchingRef.current = false; // Reset forçado para permitir o fetch
+          await refreshProfile(session.user.id);
         }
       } catch (err) {
         console.error('AuthContext: visibility change error:', err);
@@ -279,7 +317,8 @@ export const AuthProvider = ({ children }) => {
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    // Heartbeat: renova a sessão periodicamente (a cada 5 min) para evitar deadlocks de inatividade
+    // Heartbeat: renova a sessão E atualiza o profile a cada 4 min
+    // para detectar mudanças externas (bloqueio, must_change_password, etc.)
     const heartbeatTimer = setInterval(async () => {
       if (!mountedRef.current) return;
       if (isSessionExpired()) {
@@ -291,11 +330,15 @@ export const AuthProvider = ({ children }) => {
       }
       try {
         await supabase.auth.refreshSession();
-        await supabase.auth.getSession();
+        const { data: { session } } = await supabase.auth.getSession();
+        // Atualiza o profile se o usuário estiver logado e não houver fetch em andamento
+        if (session?.user && !profileFetchingRef.current && mountedRef.current) {
+          await refreshProfile(session.user.id);
+        }
       } catch (e) {
         console.warn('AuthContext: heartbeat refresh error:', e);
       }
-    }, 5 * 60 * 1000);
+    }, 4 * 60 * 1000);
 
     return () => {
       mountedRef.current = false;
@@ -356,7 +399,7 @@ export const AuthProvider = ({ children }) => {
   const isAdmin = profile?.role === 'ADMIN' || profile?.role === 'admin';
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signIn, signUp, signOut, isAdmin, refreshProfile }}>
+    <AuthContext.Provider value={{ user, profile, loading, profileLoading, signIn, signUp, signOut, isAdmin, refreshProfile }}>
       {loading ? (
         <div className="min-h-screen bg-zinc-50 dark:bg-black flex flex-col items-center justify-center gap-3">
           <div className="animate-spin h-8 w-8 border-4 border-zinc-900 border-t-transparent rounded-full dark:border-white dark:border-t-transparent"></div>

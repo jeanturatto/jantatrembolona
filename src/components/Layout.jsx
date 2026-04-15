@@ -12,6 +12,7 @@ import {
   Menu,
   X,
   Bell,
+  Plus,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { ProfileModal } from './ProfileModal';
@@ -19,7 +20,7 @@ import { CreateEventModal } from './CreateEventModal';
 import { supabase } from '../lib/supabase';
 
 export default function Layout() {
-  const { user, profile, isAdmin, signOut, refreshProfile } = useAuth();
+  const { user, profile, isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -61,44 +62,10 @@ export default function Layout() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  const handleProfileSave = async ({ phone, name, avatarUrl, pix, dataNascimento, newPassword, oldPassword }) => {
-    setIsProfileOpen(false);
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ telefone: phone, name, pix, avatar_url: avatarUrl, data_nascimento: dataNascimento || null })
-        .eq('id', user.id);
-      if (error) throw error;
-      
-      const updateData = { data: { name, phone, pix } };
-      if (newPassword && newPassword.length >= 6) {
-        if (!oldPassword) {
-            showToast('A senha atual é obrigatória para alterar a senha.', 'error');
-            return;
-        }
-        
-        await supabase.auth.refreshSession();
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-            email: user.email,
-            password: oldPassword
-        });
-
-        if (signInError) {
-            showToast('A senha atual está incorreta.', 'error');
-            return;
-        }
-
-        updateData.password = newPassword;
-      }
-      
-      const { error: authError } = await supabase.auth.updateUser(updateData);
-      if (authError) throw authError;
-
-      await refreshProfile(user.id);
-      showToast(newPassword ? 'Perfil e senha atualizados!' : 'Perfil atualizado com sucesso!');
-    } catch (err) {
-      showToast('Erro ao atualizar: ' + (err?.message || JSON.stringify(err)), 'error');
-    }
+  const handleProfileSave = () => {
+    // A lógica de salvar (incluindo senha) foi movida para dentro do ProfileModal.
+    // Este callback é chamado apenas ao concluir com sucesso para exibir o toast.
+    showToast('Perfil atualizado com sucesso!');
   };
 
   const userInitial = profile?.name?.charAt(0) || user?.email?.charAt(0) || 'U';

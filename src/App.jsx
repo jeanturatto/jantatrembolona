@@ -10,11 +10,31 @@ import RelatoriosPage from './pages/RelatoriosPage';
 import AdminPage from './pages/AdminPage';
 import ForcePasswordChange from './components/ForcePasswordChange';
 
+class GlobalErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { hasError: false, error: null, info: null }; }
+  static getDerivedStateFromError(error) { return { hasError: true, error }; }
+  componentDidCatch(error, info) { this.setState({ info }); console.error(error, info); }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: '2rem', color: 'red', backgroundColor: '#fff', fontFamily: 'monospace' }}>
+          <h2>💥 ALERTA DE ERRO CRÍTICO (Envie para a IA) 💥</h2>
+          <pre>{this.state.error?.toString()}</pre>
+          <pre style={{ marginTop: '1rem', whiteSpace: 'pre-wrap' }}>{this.state.error?.stack}</pre>
+          <pre style={{ marginTop: '1rem', whiteSpace: 'pre-wrap' }}>{this.state.info?.componentStack}</pre>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 // Protected Route Wrapper
 const ProtectedRoute = ({ children, requireAdmin = false }) => {
-  const { user, isAdmin, loading, profile } = useAuth();
-  
-  if (loading) return (
+  const { user, isAdmin, loading, profile, profileLoading } = useAuth();
+
+  // Aguarda tanto o auth quanto o profile carregarem para evitar flashes e crashes
+  if (loading || profileLoading) return (
     <div className="min-h-screen bg-[#f2f1fb] dark:bg-[#090914] flex items-center justify-center">
       <div className="flex flex-col items-center gap-3">
         <div className="w-10 h-10 bg-[#2842B5] rounded-xl flex items-center justify-center opacity-80 animate-pulse" />
@@ -31,28 +51,30 @@ const ProtectedRoute = ({ children, requireAdmin = false }) => {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          {/* Rota pública */}
-          <Route path="/login" element={<LoginPage />} />
+    <GlobalErrorBoundary>
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            {/* Rota pública */}
+            <Route path="/login" element={<LoginPage />} />
 
-          {/* Rotas protegidas (com Layout) */}
-          <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-            <Route index element={<DashboardPage />} />
-            <Route path="jantas" element={<JantasPage />} />
-            <Route path="relatorios" element={<RelatoriosPage />} />
-            <Route path="admin" element={
-              <ProtectedRoute requireAdmin={true}>
-                <AdminPage />
-              </ProtectedRoute>
-            } />
-          </Route>
+            {/* Rotas protegidas (com Layout) */}
+            <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+              <Route index element={<DashboardPage />} />
+              <Route path="jantas" element={<JantasPage />} />
+              <Route path="relatorios" element={<RelatoriosPage />} />
+              <Route path="admin" element={
+                <ProtectedRoute requireAdmin={true}>
+                  <AdminPage />
+                </ProtectedRoute>
+              } />
+            </Route>
 
-          {/* Fallback */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
+            {/* Fallback */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
+    </GlobalErrorBoundary>
   );
 }
