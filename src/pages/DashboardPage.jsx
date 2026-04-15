@@ -23,8 +23,8 @@ const isEventPastDeadline = (eventDateStr) => {
   const eventMonth = eventDate.getUTCMonth();
   const eventDay = eventDate.getUTCDate();
 
-  // Prazo = dia anterior à janta às 16:00 BRT
-  const deadlineBRT = new Date(eventYear, eventMonth, eventDay - 1, 16, 0, 0, 0);
+  // Prazo = meio-dia (12:00) do dia da janta em BRT
+  const deadlineBRT = new Date(eventYear, eventMonth, eventDay, 12, 0, 0, 0);
   const brtAsDate = new Date(
     brt.getFullYear(), brt.getMonth(), brt.getDate(),
     brt.getHours(), brt.getMinutes(), brt.getSeconds()
@@ -123,11 +123,14 @@ export default function DashboardPage() {
         .filter(e => myAttendedIds.has(e.id) && !ratedEventIds.has(e.id))
         .sort((a, b) => new Date(b.date) - new Date(a.date))[0];
       if (pendingRating) {
-        setPendingRatingEvent({
+        const ratingPayload = {
           id: pendingRating.id,
           name: pendingRating.name || 'Janta',
           dateFormatted: new Date(pendingRating.date).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }),
-        });
+        };
+        setPendingRatingEvent(ratingPayload);
+        // Force the rating modal if there's a pending rating
+        setRatingEvent(ratingPayload);
       } else {
         setPendingRatingEvent(null);
       }
@@ -255,7 +258,7 @@ export default function DashboardPage() {
           event_id: proximaAberta.id,
           user_id: user.id,
           status: 'Falta Justificada',
-          justificativa: `${userName} não confirmou dentro do horário limite (16:00 do dia anterior)`
+          justificativa: `Não confirmou dentro do Horário`
         }, { onConflict: 'event_id,user_id' });
 
         if (error) throw error;
@@ -459,9 +462,16 @@ export default function DashboardPage() {
                   <h3 className="text-lg font-bold text-zinc-900 dark:text-white leading-tight capitalize cursor-pointer hover:underline" onClick={() => setDetailEvent(janta)}>
                     {janta.name}
                   </h3>
-                  <p className="text-xs text-zinc-400 font-medium capitalize mt-1">
-                    {janta.monthYearText.split(' de ')[0]}, {janta.monthYearText.split(' de ')[1]} • {janta.timeText}
-                  </p>
+                  <div className="flex flex-col gap-0.5 mt-1">
+                    <p className="text-xs text-zinc-400 font-medium capitalize">
+                      {janta.monthYearText.split(' de ')[0]}, {janta.monthYearText.split(' de ')[1]} • {janta.timeText}
+                    </p>
+                    {janta.location && (
+                      <p className="text-xs text-zinc-500 font-medium capitalize flex items-center gap-1">
+                        <MapPin size={11} className="shrink-0" /> {janta.location}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -516,19 +526,60 @@ export default function DashboardPage() {
                 </div>
 
                 {janta.status === 'Aberto' ? (
-                  <button 
-                    onClick={() => setDetailEvent(janta)}
-                    className="bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-xs font-bold px-5 py-2 rounded-lg transition-colors cursor-pointer"
-                  >
-                    Participar
-                  </button>
+                  isEventPastDeadline(janta.rawDate) ? (
+                    <div className="flex flex-col items-end">
+                      <span className="text-[10px] text-zinc-500 font-bold bg-zinc-100 dark:bg-zinc-800 px-3 py-1.5 rounded-lg flex items-center gap-1.5 cursor-not-allowed">
+                        <Lock size={12} /> Prazo Encerrado
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex bg-zinc-100/50 dark:bg-zinc-800/30 p-1 rounded-xl border border-zinc-100 dark:border-zinc-800">
+                      <button
+                        disabled={actionLoading || (janta.userStatus && janta.userStatus !== 'Presente')}
+                        onClick={(e) => { e.stopPropagation(); handleAttendance(janta.id, 'Presente'); }}
+                        className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all ${
+                          janta.userStatus === 'Presente' ? 'bg-green-500 text-white shadow-sm' : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'
+                        } ${actionLoading || (janta.userStatus && janta.userStatus !== 'Presente') ? 'opacity-40 cursor-not-allowed' : ''}`}
+                      >
+                        <CheckCircle2 size={12} /> Vai
+                      </button>
+                      <button
+                        disabled={actionLoading || (janta.userStatus && janta.userStatus !== 'Falta Justificada')}
+                        onClick={(e) => { e.stopPropagation(); setIsJustModalOpen(true); setJustEventId(janta.id); }}
+                        className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all mx-0.5 ${
+                          janta.userStatus === 'Falta Justificada' ? 'bg-amber-500 text-white shadow-sm' : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'
+                        } ${actionLoading || (janta.userStatus && janta.userStatus !== 'Falta Justificada') ? 'opacity-40 cursor-not-allowed' : ''}`}
+                      >
+                        <AlertCircle size={12} /> Just.
+                      </button>
+                      <button
+                        disabled={actionLoading || (janta.userStatus && janta.userStatus !== 'Ausente')}
+                        onClick={(e) => { e.stopPropagation(); handleAttendance(janta.id, 'Ausente'); }}
+                        className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all ${
+                          janta.userStatus === 'Ausente' ? 'bg-zinc-500 text-white shadow-sm' : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'
+                        } ${actionLoading || (janta.userStatus && janta.userStatus !== 'Ausente') ? 'opacity-40 cursor-not-allowed' : ''}`}
+                      >
+                        <XCircle size={12} /> Não
+                      </button>
+                    </div>
+                  )
                 ) : (
-                  <button 
-                    onClick={() => setDetailEvent(janta)}
-                    className="text-zinc-900 border-b border-zinc-900 text-xs font-bold pb-0.5 hover:text-blue-600 hover:border-blue-600 transition-colors cursor-pointer"
-                  >
-                    Ver Detalhes
-                  </button>
+                  <div className="flex gap-2">
+                    {janta.status === 'Finalizado' && janta.userStatus === 'Presente' && (
+                      <button 
+                        onClick={() => setRatingEvent(janta)}
+                        className="bg-amber-100 hover:bg-amber-200 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-[10px] font-bold px-3 py-1.5 rounded-lg transition-colors cursor-pointer flex items-center gap-1"
+                      >
+                        <Star size={11} className="fill-amber-500 dark:fill-amber-400 text-amber-500 dark:text-amber-400" /> Avaliar
+                      </button>
+                    )}
+                    <button 
+                      onClick={() => setDetailEvent(janta)}
+                      className="text-zinc-900 border-b border-zinc-900 text-xs font-bold pb-0.5 hover:text-blue-600 hover:border-blue-600 transition-colors cursor-pointer"
+                    >
+                      Ver Detalhes
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
@@ -673,6 +724,7 @@ export default function DashboardPage() {
         actionLoading={actionLoading}
         pastDeadline={detailEvent ? isEventPastDeadline(detailEvent.rawDate) : false}
         onEditClick={setEditEvent}
+        onPaymentClick={setPaymentModalEvent}
       />
 
       <EditEventModal
@@ -685,13 +737,18 @@ export default function DashboardPage() {
 
       <RatingModal
         isOpen={!!ratingEvent}
-        onClose={() => setRatingEvent(null)}
+        onClose={() => {
+          // If the event we are trying to close is the mandatory pending event, ignore the close (force user).
+          if (pendingRatingEvent && ratingEvent?.id === pendingRatingEvent.id) {
+            return; // required
+          }
+          setRatingEvent(null);
+        }}
         event={ratingEvent}
         onSubmit={handleRatingSubmit}
         loading={ratingLoading}
-      />
-
-      {/* Modal de pagamento: auto-popup para responsaveis de jantas finalizadas */}
+        unclosable={!!(pendingRatingEvent && ratingEvent?.id === pendingRatingEvent.id)}
+      />{/* Modal de pagamento: auto-popup para responsaveis de jantas finalizadas */}
       <PaymentModal
         isOpen={!!pendingPaymentEvent && !paymentModalEvent}
         onClose={() => setPendingPaymentEvent(null)}

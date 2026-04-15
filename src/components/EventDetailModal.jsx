@@ -23,8 +23,9 @@ export const EventDetailModal = ({
   actionLoading,
   pastDeadline,
   onEditClick,
+  onPaymentClick
 }) => {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [responsaveis, setResponsaveis] = useState([]);
 
   const isUserResponsible = event?.responsibles?.includes(user?.id);
@@ -184,6 +185,14 @@ export const EventDetailModal = ({
               className="flex-1 p-3 border-2 border-blue-200 dark:border-blue-900/50 bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 rounded-xl font-bold text-sm hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors flex items-center justify-center gap-2"
             >
               <Edit3 size={16} /> Editar Informações
+            </button>
+          )}
+          {event.status === 'Finalizado' && (isUserResponsible || isAdmin) && onPaymentClick && (
+            <button
+               onClick={() => { onPaymentClick(event); onClose(); }}
+               className="flex-1 p-3 border-2 border-emerald-200 text-emerald-600 bg-emerald-50 dark:bg-emerald-900/10 dark:border-emerald-800/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/20 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2"
+            >
+              <span className="text-xl">💰</span> Gerar Cobrança
             </button>
           )}
           <button

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Users, Utensils, Lock, Pencil, Eye, CheckCheck, XCircle, UserCog, Trash2, Receipt } from 'lucide-react';
+import { Plus, Users, Utensils, Lock, Pencil, Eye, CheckCheck, XCircle, UserCog, Trash2, Receipt, MapPin } from 'lucide-react';
 import { Card } from '../components/Card';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -23,8 +23,8 @@ const isEventPastDeadline = (eventDateStr) => {
   const eventMonth = eventDate.getUTCMonth();
   const eventDay = eventDate.getUTCDate();
 
-  // Prazo = dia anterior à janta às 16:00 (em horário BRT)
-  const deadlineBRT = new Date(eventYear, eventMonth, eventDay - 1, 16, 0, 0, 0);
+  // Prazo = meio-dia (12:00) do dia da janta em BRT
+  const deadlineBRT = new Date(eventYear, eventMonth, eventDay, 12, 0, 0, 0);
   const brtAsDate = new Date(
     brt.getFullYear(), brt.getMonth(), brt.getDate(),
     brt.getHours(), brt.getMinutes(), brt.getSeconds()
@@ -318,6 +318,11 @@ export default function JantasPage() {
                 </div>
                 <p className="text-sm font-bold text-zinc-900 dark:text-white mb-1 capitalize">{janta.name}</p>
                 <p className="text-xs font-medium text-zinc-500 mb-1 capitalize">{janta.date}</p>
+                {janta.location && (
+                  <p className="text-xs flex items-center gap-2 text-zinc-500 mb-1 capitalize">
+                    <MapPin size={12} className="shrink-0" /> {janta.location}
+                  </p>
+                )}
                 <p className="text-xs flex items-center gap-2 text-zinc-500"><Utensils size={12} /> {janta.responsiblesLabel}</p>
               </div>
 
@@ -460,6 +465,7 @@ export default function JantasPage() {
         actionLoading={actionLoading}
         pastDeadline={detailEvent ? isEventPastDeadline(detailEvent.rawDate) : false}
         onEditClick={setEditEvent}
+        onPaymentClick={setPaymentEvent}
       />
       <AdminAttendanceModal isOpen={!!attendanceEvent} onClose={() => setAttendanceEvent(null)} event={attendanceEvent} onSuccess={fetchJantas} />
       <JustificativaModal

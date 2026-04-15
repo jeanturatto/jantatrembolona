@@ -75,7 +75,7 @@ export const PaymentModal = ({ isOpen, onClose, event, onSuccess }) => {
       .map(r => `💳 PIX (${r.name}): ${r.pix}`)
       .join('\n');
 
-    const participantesStr = attendees.map(n => `✅ ${n}`).join('\n');
+    const participantesStr = attendees.map(n => `❌ ${n}`).join('\n');
     const dateStr = event?.dateFormatted || event?.date || '';
     const location = event?.rawLocation || event?.location || '';
 

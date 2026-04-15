@@ -4,7 +4,7 @@ import { Modal } from './Modal';
 
 const LABELS = ['', 'Fraco 😬', 'Regular 😐', 'Bom 👍', 'Muito bom! 😄', 'Incrível! 🏆'];
 
-export const RatingModal = ({ isOpen, onClose, event, onSubmit, loading }) => {
+export const RatingModal = ({ isOpen, onClose, event, onSubmit, loading, unclosable }) => {
   const [stars, setStars] = useState(0);
   const [hovered, setHovered] = useState(0);
   const [comment, setComment] = useState('');
@@ -26,7 +26,7 @@ export const RatingModal = ({ isOpen, onClose, event, onSubmit, loading }) => {
   const active = hovered || stars;
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Avaliar Janta">
+    <Modal isOpen={isOpen} onClose={unclosable ? undefined : handleClose} title="Avaliar Janta">
       <div className="space-y-5">
 
         {/* Event info */}
@@ -83,16 +83,18 @@ export const RatingModal = ({ isOpen, onClose, event, onSubmit, loading }) => {
         </div>
 
         <p className="text-[11px] text-center text-zinc-400 dark:text-[#5a5a80] italic">
-          Avaliação anônima — ninguém saberá quem votou.
+          Sua avaliação será enviada com seu perfil (como participante).
         </p>
 
         <div className="flex gap-3">
-          <button
-            onClick={handleClose}
-            className="flex-1 py-3 border border-zinc-200 dark:border-white/[0.09] text-zinc-900 dark:text-[#B8ABCF] rounded-xl font-semibold text-sm hover:bg-zinc-50 dark:hover:bg-white/[0.03] transition-colors"
-          >
-            Cancelar
-          </button>
+          {!unclosable && (
+            <button
+              onClick={handleClose}
+              className="flex-1 py-3 border border-zinc-200 dark:border-white/[0.09] text-zinc-900 dark:text-[#B8ABCF] rounded-xl font-semibold text-sm hover:bg-zinc-50 dark:hover:bg-white/[0.03] transition-colors"
+            >
+              Cancelar
+            </button>
+          )}
           <button
             onClick={handleSubmit}
             disabled={stars === 0 || loading}
