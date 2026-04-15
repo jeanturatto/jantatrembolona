@@ -16,7 +16,6 @@ export default function ForcePasswordChange() {
   // Critérios de força da senha
   const criteria = [
     { label: 'Mínimo 6 caracteres', ok: password.length >= 6 },
-    { label: 'Letras e números', ok: /[a-zA-Z]/.test(password) && /[0-9]/.test(password) },
     { label: 'Senhas coincidem', ok: password.length >= 6 && password === confirmPassword },
   ];
   const allOk = criteria.every(c => c.ok);

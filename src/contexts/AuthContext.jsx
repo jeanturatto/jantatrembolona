@@ -3,105 +3,74 @@ import { supabase } from '../lib/supabase';
 
 const AuthContext = createContext({});
 
-// Flag que indica se o usuário escolheu "Lembrar usuário"
-const REMEMBER_FLAG = 'jantatrembo-remember';
-// Chave onde o Supabase armazena a sessão (definida em supabase.js)
-const SESSION_KEY = 'jantatrembo-auth';
+const REMEMBER_FLAG   = 'jantatrembo-remember';
+const SESSION_KEY     = 'jantatrembo-auth';
+const EXPIRY_KEY      = 'jantatrembo-session-expiry';
 
-/**
- * Migra sessão do sessionStorage (formato antigo) para o localStorage (novo),
- * para que usuários existentes não sejam deslogados na atualização.
- */
+// ─── Storage helpers ─────────────────────────────────────────────────────────
 function migrateSessionFromStorage() {
   try {
-    const SESSION_KEY_LOCAL = 'jantatrembo-auth';
-    const existingLocal = localStorage.getItem(SESSION_KEY_LOCAL);
-    if (!existingLocal) {
-      const fromSession = sessionStorage.getItem(SESSION_KEY_LOCAL);
-      if (fromSession) {
-        localStorage.setItem(SESSION_KEY_LOCAL, fromSession);
-        console.info('AuthContext: sessão migrada do sessionStorage para localStorage.');
-      }
+    if (!localStorage.getItem(SESSION_KEY)) {
+      const s = sessionStorage.getItem(SESSION_KEY);
+      if (s) localStorage.setItem(SESSION_KEY, s);
     }
   } catch (_) {}
 }
-
-// Executa migração imediatamente ao carregar o módulo
 migrateSessionFromStorage();
 
-/**
- * Remove a sessão completamente (logout).
- * O Supabase usa localStorage agora, então basta limpar de lá.
- */
 function clearAllSessions() {
   try {
-    localStorage.removeItem(SESSION_KEY);
-    localStorage.removeItem(REMEMBER_FLAG);
-    // Limpa chaves legadas do formato sb-*
-    Object.keys(localStorage).forEach(key => {
-      if (key.startsWith('sb-')) localStorage.removeItem(key);
-    });
-    // Limpa sessionStorage legado caso exista
+    [SESSION_KEY, REMEMBER_FLAG, EXPIRY_KEY].forEach(k => localStorage.removeItem(k));
+    Object.keys(localStorage).filter(k => k.startsWith('sb-')).forEach(k => localStorage.removeItem(k));
     try {
       sessionStorage.removeItem(SESSION_KEY);
-      Object.keys(sessionStorage).forEach(key => {
-        if (key.startsWith('sb-')) sessionStorage.removeItem(key);
-      });
+      Object.keys(sessionStorage).filter(k => k.startsWith('sb-')).forEach(k => sessionStorage.removeItem(k));
     } catch (_) {}
-  } catch (e) {
-    console.error('Erro ao limpar sessão:', e);
-  }
-}
-
-/**
- * Quando "lembrar" NÃO está ativo, registra um timestamp de expiração
- * curto (8h) para simular uma sessão de aba.
- * Na próxima abertura sem "lembrar", se a sessão expirou, ela é removida.
- */
-function applySessionExpiry(rememberMe) {
-  try {
-    if (rememberMe) {
-      localStorage.removeItem('jantatrembo-session-expiry');
-    } else {
-      // Sessão expira em 8 horas
-      const expiry = Date.now() + 8 * 60 * 60 * 1000;
-      localStorage.setItem('jantatrembo-session-expiry', String(expiry));
-    }
   } catch (_) {}
 }
 
-/**
- * Verifica se a sessão expirou (para usuários sem "lembrar").
- * Retorna true se deve apagar a sessão.
- */
-function isSessionExpired() {
+function applySessionExpiry(rememberMe) {
   try {
-    const expiry = localStorage.getItem('jantatrembo-session-expiry');
-    if (!expiry) return false; // sem expiração = lembrar ativo
-    return Date.now() > Number(expiry);
-  } catch (_) {
-    return false;
-  }
+    if (rememberMe) localStorage.removeItem(EXPIRY_KEY);
+    else localStorage.setItem(EXPIRY_KEY, String(Date.now() + 8 * 60 * 60 * 1000));
+  } catch (_) {}
 }
 
+function isSessionExpired() {
+  try {
+    const e = localStorage.getItem(EXPIRY_KEY);
+    return e ? Date.now() > Number(e) : false;
+  } catch (_) { return false; }
+}
+
+// ─── Provider ────────────────────────────────────────────────────────────────
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [user,    setUser]    = useState(null);
   const [profile, setProfile] = useState(null);
+  // loading = true só durante a verificação inicial de sessão
   const [loading, setLoading] = useState(true);
-  const [profileLoading, setProfileLoading] = useState(false);
-  const profileFetchingRef = useRef(false);
-  const mountedRef = useRef(true);
-  const initDoneRef = useRef(false);
-  const currentUserIdRef = useRef(null);
 
-  const refreshProfile = useCallback(async (userId) => {
+  const mountedRef      = useRef(true);
+  const initDoneRef     = useRef(false);
+  const fetchingRef     = useRef(false);   // guard de fetch paralelo
+  const fetchAbortRef   = useRef(null);    // permite cancelar fetch anterior
+
+  // ── Busca profile SEMPRE reseta fetchingRef no finally ────────────────────
+  // Não expõe profileLoading para ProtectedRoute — isso evita flashes de loading
+  // após eventos de auth (USER_UPDATED, TOKEN_REFRESHED). O estado externo relevante
+  // para roteamento é apenas: loading (inicial) + user + profile.
+  const fetchProfile = useCallback(async (userId) => {
     if (!userId || !mountedRef.current) return;
-    // Evita fetches paralelos para o MESMO usuário
-    if (profileFetchingRef.current) return;
 
-    profileFetchingRef.current = true;
-    if (mountedRef.current) setProfileLoading(true);
+    // Cancela fetch anterior se houver um pendente
+    if (fetchAbortRef.current) {
+      fetchAbortRef.current.cancelled = true;
+    }
+    const ticket = { cancelled: false };
+    fetchAbortRef.current = ticket;
 
+    // Sem profileLoading — fetches silenciosos em background
+    fetchingRef.current = true;
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -109,112 +78,78 @@ export const AuthProvider = ({ children }) => {
         .eq('id', userId)
         .single();
 
-      if (error) throw error;
+      // Ignora resultado de fetch cancelado
+      if (ticket.cancelled || !mountedRef.current) return;
 
-      // Se o usuário está bloqueado, força logout imediato
+      if (error) {
+        console.error('AuthContext: fetchProfile error', error);
+        // Mantém profile anterior se já existir (tolerância a erros de rede)
+        return;
+      }
+
+      // Usuário bloqueado → força logout
       if (data?.blocked === true) {
         console.warn('AuthContext: usuário bloqueado, forçando logout.');
         localStorage.setItem('show_blocked_modal', 'true');
         clearAllSessions();
         await supabase.auth.signOut();
-        if (mountedRef.current) {
-          setUser(null);
-          setProfile(null);
-        }
+        if (mountedRef.current) { setUser(null); setProfile(null); }
         return;
       }
 
       if (mountedRef.current) setProfile(data);
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-      // Em caso de erro de rede, mantém o profile atual se já existir
-      // Só define fallback se não há profile ainda
-      if (mountedRef.current && !profile) {
-        setProfile({
-          name: 'Usuário',
-          role: 'USER',
-          faltas_nao_justificadas: 0,
-          inadimplente: false,
-          blocked: false,
-          must_change_password: false,
-        });
-      }
+    } catch (err) {
+      if (ticket.cancelled || !mountedRef.current) return;
+      console.error('AuthContext: fetchProfile exception', err);
     } finally {
-      // SEMPRE reseta o ref, independente de sucesso ou erro
-      profileFetchingRef.current = false;
-      if (mountedRef.current) setProfileLoading(false);
+      if (!ticket.cancelled) fetchingRef.current = false;
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Versão "force" que reseta o guard antes de buscar — usada após troca de senha
-  // para garantir que não fique preso no profileFetchingRef
-  const forceRefreshProfile = useCallback(async (userId) => {
-    profileFetchingRef.current = false;
-    return refreshProfile(userId);
-  }, [refreshProfile]);
-
+  // ─────────────────────────────────────────────────────────────────────────
   useEffect(() => {
     mountedRef.current = true;
 
-    // Fallback: libera loading em 10s caso algo falhe
-    const fallbackTimer = setTimeout(() => {
+    // Fallback: após 12s, libera loading de qualquer forma (nunca trava)
+    const fallback = setTimeout(() => {
       if (mountedRef.current && !initDoneRef.current) {
-        console.warn('AuthContext: fallback timer triggered');
-        profileFetchingRef.current = false;
-        setProfileLoading(false);
+        console.warn('AuthContext: fallback timeout disparado');
+        fetchingRef.current = false;
         setLoading(false);
         initDoneRef.current = true;
       }
-    }, 10000);
+    }, 12000);
 
+    // ── Inicialização de sessão ───────────────────────────────────────────
     const initializeAuth = async () => {
       try {
-        // Se a sessão sem "lembrar" expirou, limpa e não inicializa
         if (isSessionExpired()) {
-          console.info('AuthContext: sessão expirada (sem lembrar), limpando.');
           clearAllSessions();
-          if (mountedRef.current) {
-            setUser(null);
-            setProfile(null);
-          }
+          if (mountedRef.current) { setUser(null); setProfile(null); }
           return;
         }
 
         const { data: { session }, error } = await supabase.auth.getSession();
-
         if (error) {
-          console.error('AuthContext: getSession error:', error);
-          if (mountedRef.current) {
-            setUser(null);
-            setProfile(null);
-          }
+          console.error('AuthContext: getSession error', error);
+          if (mountedRef.current) { setUser(null); setProfile(null); }
           return;
         }
 
-        if (session?.user) {
-          if (mountedRef.current) {
-            currentUserIdRef.current = session.user.id;
-            setUser(session.user);
-            await refreshProfile(session.user.id);
-          }
-        } else {
-          if (mountedRef.current) {
-            setUser(null);
-            setProfile(null);
-          }
-        }
-      } catch (err) {
-        console.error('AuthContext: Erro ao inicializar:', err);
-        if (mountedRef.current) {
+        if (session?.user && mountedRef.current) {
+          setUser(session.user);
+          await fetchProfile(session.user.id);
+        } else if (mountedRef.current) {
           setUser(null);
           setProfile(null);
         }
+      } catch (err) {
+        console.error('AuthContext: initializeAuth exception', err);
+        if (mountedRef.current) { setUser(null); setProfile(null); }
       } finally {
         if (mountedRef.current) {
-          clearTimeout(fallbackTimer);
-          profileFetchingRef.current = false;
-          setProfileLoading(false);
+          clearTimeout(fallback);
+          fetchingRef.current = false;
           setLoading(false);
           initDoneRef.current = true;
         }
@@ -223,151 +158,93 @@ export const AuthProvider = ({ children }) => {
 
     initializeAuth();
 
-    // Listener de eventos de auth do Supabase
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    // ── onAuthStateChange ─────────────────────────────────────────────────
+    // Importante: não usamos await aqui para não bloquear eventos subsequentes.
+    // Fazemos fetchProfile sem esperar (fire-and-forget silencioso).
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mountedRef.current) return;
 
-      console.debug('AuthContext: event=', event);
+      console.debug('AuthContext event:', event);
 
       if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+        // Cancela qualquer fetch em andamento
+        if (fetchAbortRef.current) fetchAbortRef.current.cancelled = true;
+        fetchingRef.current = false;
         clearAllSessions();
-        currentUserIdRef.current = null;
-        setUser(null);
-        setProfile(null);
-        setProfileLoading(false);
-        profileFetchingRef.current = false;
-        if (initDoneRef.current) setLoading(false);
-        return;
-      }
-
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
-        const currentUser = session?.user || null;
         if (mountedRef.current) {
-          if (currentUser) {
-            setUser(currentUser);
-            // Sempre faz refresh do profile quando o evento indica mudança de usuário
-            // ou quando o profile ainda não foi carregado para este usuário
-            const userChanged = currentUserIdRef.current !== currentUser.id;
-            currentUserIdRef.current = currentUser.id;
-
-            if (userChanged || !profileFetchingRef.current) {
-              // Se initDoneRef ainda for false (inicialização em andamento),
-              // aguardamos ela terminar — ela já cuida do refreshProfile.
-              // Só agimos se já inicializamos.
-              if (initDoneRef.current) {
-                await refreshProfile(currentUser.id);
-              }
-            }
-          } else {
-            setUser(null);
-            setProfile(null);
-            currentUserIdRef.current = null;
-          }
-          if (initDoneRef.current) setLoading(false);
+          setUser(null);
+          setProfile(null);
+          setLoading(false);
         }
         return;
       }
 
-      // Fallback para outros eventos
-      const currentUser = session?.user || null;
+      // Para todos os outros eventos (SIGNED_IN, TOKEN_REFRESHED, USER_UPDATED…)
+      // só agimos após a inicialização terminar
+      if (!initDoneRef.current) return;
+
+      const currentUser = session?.user ?? null;
+      if (!currentUser) return;
+
       if (mountedRef.current) {
         setUser(currentUser);
-        if (currentUser) {
-          currentUserIdRef.current = currentUser.id;
-          if (!profileFetchingRef.current && initDoneRef.current) {
-            await refreshProfile(currentUser.id);
-          }
-        } else {
-          setProfile(null);
-          currentUserIdRef.current = null;
-        }
-        if (initDoneRef.current) setLoading(false);
+        // Fetch silencioso em background — sem profileLoading, sem trava de UI
+        fetchProfile(currentUser.id);
       }
     });
 
-    // Reconexão quando a aba volta ao foco
-    const handleVisibilityChange = async () => {
+    // ── Reconexão ao voltar ao foco ───────────────────────────────────────
+    const handleVisibilityChange = () => {
       if (document.visibilityState !== 'visible' || !mountedRef.current) return;
+      if (!initDoneRef.current) return;
 
-      // Verifica expiração ao voltar ao foco
       if (isSessionExpired()) {
         clearAllSessions();
-        await supabase.auth.signOut();
-        if (mountedRef.current) {
-          setUser(null);
-          setProfile(null);
-        }
+        supabase.auth.signOut(); // dispara SIGNED_OUT → handler acima limpa tudo
         return;
       }
 
-      try {
-        // Force an active network refresh to break dormant token locks
-        await supabase.auth.refreshSession();
-        const { data: { session } } = await supabase.auth.getSession();
-
-        if (!session && mountedRef.current) {
-          setUser(null);
-          setProfile(null);
-          currentUserIdRef.current = null;
-        } else if (session?.user && mountedRef.current) {
-          setUser(session.user);
-          currentUserIdRef.current = session.user.id;
-          // SEMPRE atualiza o profile ao voltar ao foco para detectar mudanças externas
-          // (ex: admin bloqueou, admin mudou senha, etc.)
-          profileFetchingRef.current = false; // Reset forçado para permitir o fetch
-          await refreshProfile(session.user.id);
-        }
-      } catch (err) {
-        console.error('AuthContext: visibility change error:', err);
-      }
+      // refreshSession dispara TOKEN_REFRESHED → handler acima faz fetchProfile
+      supabase.auth.refreshSession().catch(err =>
+        console.warn('AuthContext: visibility refreshSession error', err)
+      );
     };
-
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    // Heartbeat: renova a sessão E atualiza o profile a cada 4 min
-    // para detectar mudanças externas (bloqueio, must_change_password, etc.)
-    const heartbeatTimer = setInterval(async () => {
-      if (!mountedRef.current) return;
+    // ── Heartbeat a cada 5 min ────────────────────────────────────────────
+    const heartbeat = setInterval(() => {
+      if (!mountedRef.current || !initDoneRef.current) return;
+
       if (isSessionExpired()) {
         clearAllSessions();
-        await supabase.auth.signOut();
-        setUser(null);
-        setProfile(null);
+        supabase.auth.signOut();
         return;
       }
-      try {
-        await supabase.auth.refreshSession();
-        const { data: { session } } = await supabase.auth.getSession();
-        // Atualiza o profile se o usuário estiver logado e não houver fetch em andamento
-        if (session?.user && !profileFetchingRef.current && mountedRef.current) {
-          await refreshProfile(session.user.id);
-        }
-      } catch (e) {
-        console.warn('AuthContext: heartbeat refresh error:', e);
-      }
-    }, 4 * 60 * 1000);
+
+      // Apenas renova o token — o TOKEN_REFRESHED fará fetchProfile se necessário
+      supabase.auth.refreshSession().catch(err =>
+        console.warn('AuthContext: heartbeat error', err)
+      );
+    }, 5 * 60 * 1000);
 
     return () => {
       mountedRef.current = false;
-      clearTimeout(fallbackTimer);
-      clearInterval(heartbeatTimer);
+      if (fetchAbortRef.current) fetchAbortRef.current.cancelled = true;
+      clearTimeout(fallback);
+      clearInterval(heartbeat);
       subscription.unsubscribe();
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [refreshProfile]);
+  }, [fetchProfile]);
 
+  // ─── Auth actions ─────────────────────────────────────────────────────────
   const signIn = async (email, password, rememberMe = false) => {
-    // Persiste a preferência de "lembrar" ANTES do login
-    if (rememberMe) {
-      localStorage.setItem(REMEMBER_FLAG, '1');
-    } else {
-      localStorage.removeItem(REMEMBER_FLAG);
-    }
+    if (rememberMe) localStorage.setItem(REMEMBER_FLAG, '1');
+    else localStorage.removeItem(REMEMBER_FLAG);
 
     const result = await supabase.auth.signInWithPassword({ email, password });
 
     if (!result.error && result.data?.user) {
-      // Verifica se o usuário está bloqueado antes de concluir o login
       const { data: prof } = await supabase
         .from('profiles')
         .select('blocked')
@@ -383,33 +260,41 @@ export const AuthProvider = ({ children }) => {
         };
       }
 
-      // Aplica expiração baseada em "lembrar usuário"
       applySessionExpiry(rememberMe);
     }
 
     return result;
   };
 
-  const signUp = async (email, password, meta) => {
-    return supabase.auth.signUp({
-      email,
-      password,
-      options: { data: meta }
-    });
-  };
+  const signUp = async (email, password, meta) =>
+    supabase.auth.signUp({ email, password, options: { data: meta } });
 
   const signOut = async () => {
     clearAllSessions();
     return supabase.auth.signOut();
   };
 
+  // refreshProfile exposto para componentes que precisam forçar atualização pontual
+  const refreshProfile = useCallback((userId) => {
+    if (fetchAbortRef.current) fetchAbortRef.current.cancelled = true;
+    fetchingRef.current = false;
+    return fetchProfile(userId);
+  }, [fetchProfile]);
+
   const isAdmin = profile?.role === 'ADMIN' || profile?.role === 'admin';
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, profileLoading, signIn, signUp, signOut, isAdmin, refreshProfile, forceRefreshProfile }}>
+    <AuthContext.Provider value={{
+      user, profile, loading,
+      // profileLoading removido intencionalmente — fetches são silenciosos
+      signIn, signUp, signOut,
+      isAdmin,
+      refreshProfile,
+      forceRefreshProfile: refreshProfile, // alias para compatibilidade
+    }}>
       {loading ? (
         <div className="min-h-screen bg-zinc-50 dark:bg-black flex flex-col items-center justify-center gap-3">
-          <div className="animate-spin h-8 w-8 border-4 border-zinc-900 border-t-transparent rounded-full dark:border-white dark:border-t-transparent"></div>
+          <div className="animate-spin h-8 w-8 border-4 border-zinc-900 border-t-transparent rounded-full dark:border-white dark:border-t-transparent" />
           <p className="text-xs text-zinc-400 font-medium">Verificando sessão...</p>
         </div>
       ) : children}

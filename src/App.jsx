@@ -32,10 +32,22 @@ class GlobalErrorBoundary extends React.Component {
 
 // Protected Route Wrapper
 const ProtectedRoute = ({ children, requireAdmin = false }) => {
-  const { user, isAdmin, loading, profile, profileLoading } = useAuth();
+  const { user, isAdmin, loading, profile } = useAuth();
+  const [profileTimeout, setProfileTimeout] = React.useState(false);
 
-  // Aguarda tanto o auth quanto o profile carregarem para evitar flashes e crashes
-  if (loading || profileLoading) return (
+  // Aguarda o profile ser carregado após o user estar disponível.
+  // Timeout de segurança de 5s para nunca travar.
+  React.useEffect(() => {
+    if (user && !profile) {
+      const t = setTimeout(() => setProfileTimeout(true), 5000);
+      return () => clearTimeout(t);
+    }
+    setProfileTimeout(false);
+  }, [user, profile]);
+
+  // Tela de carregando APENAS na inicialização inicial OU enquanto aguarda profile (com timeout)
+  const waitingForProfile = user && !profile && !profileTimeout;
+  if (loading || waitingForProfile) return (
     <div className="min-h-screen bg-[#f2f1fb] dark:bg-[#090914] flex items-center justify-center">
       <div className="flex flex-col items-center gap-3">
         <div className="w-10 h-10 bg-[#2842B5] rounded-xl flex items-center justify-center opacity-80 animate-pulse" />
@@ -43,10 +55,11 @@ const ProtectedRoute = ({ children, requireAdmin = false }) => {
       </div>
     </div>
   );
+
   if (!user) return <Navigate to="/login" replace />;
   if (profile?.must_change_password) return <ForcePasswordChange />;
   if (requireAdmin && !isAdmin) return <Navigate to="/" replace />;
-  
+
   return children;
 };
 
