@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Users, Utensils, Lock, Pencil, Eye, CheckCheck, XCircle, UserCog, Trash2 } from 'lucide-react';
+import { Plus, Users, Utensils, Lock, Pencil, Eye, CheckCheck, XCircle, UserCog, Trash2, Receipt } from 'lucide-react';
 import { Card } from '../components/Card';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -8,6 +8,7 @@ import { EditEventModal } from '../components/EditEventModal';
 import { EventDetailModal } from '../components/EventDetailModal';
 import { JustificativaModal } from '../components/JustificativaModal';
 import { AdminAttendanceModal } from '../components/AdminAttendanceModal';
+import { PaymentModal } from '../components/PaymentModal';
 
 // Regra: o prazo de confirmação encerra no DIA ANTERIOR à janta às 16:00 BRT.
 const isEventPastDeadline = (eventDateStr) => {
@@ -48,6 +49,7 @@ export default function JantasPage() {
   const [attendanceEvent, setAttendanceEvent] = useState(null);
   const [ausenciasNoMes, setAusenciasNoMes] = useState(0);
   const LIMITE_AUSENCIAS = 3;
+  const [paymentEvent, setPaymentEvent] = useState(null);
 
   const fetchJantas = useCallback(async () => {
     if (!user?.id) return;
@@ -99,6 +101,7 @@ export default function JantasPage() {
             attendees: presentes.length,
             userStatus: userAtt ? userAtt.status : null,
             created_by: j.created_by,
+            payment_value: j.payment_value || null,
           };
         });
 
@@ -346,7 +349,23 @@ export default function JantasPage() {
                     </button>
                   )}
 
-                  {/* Admin: Gerenciar Presenças */}
+                  {/* Admin/Responsável: Gerar Cobrança (somente Finalizado) */}
+                  {janta.status === 'Finalizado' && janta.responsibles.includes(user.id) && (
+                    <button onClick={() => setPaymentEvent(janta)}
+                      className="flex items-center gap-1 text-[10px] font-bold px-2.5 py-1.5 rounded-lg border border-emerald-200 text-emerald-600 bg-emerald-50 dark:bg-emerald-900/10 dark:border-emerald-800/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/20 transition-colors">
+                      <Receipt size={12} />
+                      {janta.payment_value ? 'Ver Cobrança' : 'Gerar Cobrança'}
+                    </button>
+                  )}
+                  {/* Admin: Ver/editar cobrança gerada por responsável */}
+                  {janta.status === 'Finalizado' && isAdmin && !janta.responsibles.includes(user.id) && janta.payment_value && (
+                    <button onClick={() => setPaymentEvent(janta)}
+                      className="flex items-center gap-1 text-[10px] font-bold px-2.5 py-1.5 rounded-lg border border-emerald-200 text-emerald-600 bg-emerald-50 dark:bg-emerald-900/10 dark:border-emerald-800/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/20 transition-colors">
+                      <Receipt size={12} /> Ver Cobrança
+                    </button>
+                  )}
+
+                  {/* Admin: Gerenciar Presaças */}
                   {isAdmin && janta.status === 'Aberto' && (
                     <button onClick={() => setAttendanceEvent(janta)}
                       className="flex items-center gap-1 text-[10px] font-bold px-2.5 py-1.5 rounded-lg border border-blue-200 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors">
@@ -448,6 +467,12 @@ export default function JantasPage() {
         onClose={() => { setIsJustModalOpen(false); setJustEventId(null); }}
         onConfirm={handleJustificativaConfirm}
         loading={!!actionLoading}
+      />
+      <PaymentModal
+        isOpen={!!paymentEvent}
+        onClose={() => setPaymentEvent(null)}
+        event={paymentEvent}
+        onSuccess={fetchJantas}
       />
     </div>
   );

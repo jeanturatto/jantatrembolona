@@ -8,6 +8,7 @@ import { JustificativaModal } from '../components/JustificativaModal';
 import { EventDetailModal } from '../components/EventDetailModal';
 import { EditEventModal } from '../components/EditEventModal';
 import { RatingModal } from '../components/RatingModal';
+import { PaymentModal } from '../components/PaymentModal';
 
 // Regra: o prazo de confirmação encerra no DIA ANTERIOR à janta às 16:00 BRT.
 const isEventPastDeadline = (eventDateStr) => {
@@ -49,6 +50,9 @@ export default function DashboardPage() {
   const [ratingEvent, setRatingEvent] = useState(null);
   const [ratingLoading, setRatingLoading] = useState(false);
   const [pendingRatingEvent, setPendingRatingEvent] = useState(null);
+  // Payment modal (responsaveis)
+  const [pendingPaymentEvent, setPendingPaymentEvent] = useState(null);
+  const [paymentModalEvent, setPaymentModalEvent] = useState(null);
   // Ranking
   const [activeTab, setActiveTab] = useState('Todas');
   const [ranking, setRanking] = useState([]);
@@ -73,7 +77,7 @@ export default function DashboardPage() {
         supabase.from('attendances').select('*').eq('user_id', user.id),
         supabase.from('profiles').select('id, name, email, avatar_url'),
         supabase.from('profiles').select('id, name, avatar_url, data_nascimento').not('data_nascimento', 'is', null),
-        supabase.from('events').select('id, name, date, responsibles, ratings(stars, comment)').eq('status', 'Finalizado').gte('date', `${currentYear}-01-01`).lte('date', today),
+        supabase.from('events').select('id, name, date, location, responsibles, ratings(stars, comment), payment_value').eq('status', 'Finalizado').gte('date', `${currentYear}-01-01`).lte('date', today),
         supabase.from('ratings').select('event_id').eq('user_id', user.id),
       ]);
 
@@ -113,7 +117,7 @@ export default function DashboardPage() {
         .slice(0, 3);
       setRanking(ranked);
 
-      // ── Evento pendente de avaliação (user foi Presente, não avaliou ainda)
+      // ── Evento pendente de avaliação
       const myAttendedIds = new Set((attendances || []).filter(a => a.status === 'Presente').map(a => a.event_id));
       const pendingRating = (finishedEvents || [])
         .filter(e => myAttendedIds.has(e.id) && !ratedEventIds.has(e.id))
@@ -126,6 +130,30 @@ export default function DashboardPage() {
         });
       } else {
         setPendingRatingEvent(null);
+      }
+
+      // ── Modal de pagamento para responsáveis
+      // Aparece automaticamente para responsaveis de jantas finalizadas sem payment_value
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const pendingPayment = (finishedEvents || [])
+        .find(e =>
+          (e.responsibles || []).includes(user.id) &&
+          !e.payment_value &&
+          new Date(e.date) <= yesterday
+        );
+      if (pendingPayment) {
+        setPendingPaymentEvent({
+          id: pendingPayment.id,
+          name: pendingPayment.name || 'Janta',
+          date: new Date(pendingPayment.date).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }),
+          dateFormatted: new Date(pendingPayment.date).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }),
+          rawLocation: pendingPayment.location,
+          responsibles: pendingPayment.responsibles || [],
+          payment_value: pendingPayment.payment_value || null,
+        });
+      } else {
+        setPendingPaymentEvent(null);
       }
 
       if (jantasData) {
@@ -634,6 +662,20 @@ export default function DashboardPage() {
         event={ratingEvent}
         onSubmit={handleRatingSubmit}
         loading={ratingLoading}
+      />
+
+      {/* Modal de pagamento: auto-popup para responsaveis de jantas finalizadas */}
+      <PaymentModal
+        isOpen={!!pendingPaymentEvent && !paymentModalEvent}
+        onClose={() => setPendingPaymentEvent(null)}
+        event={pendingPaymentEvent}
+        onSuccess={fetchDashboardData}
+      />
+      <PaymentModal
+        isOpen={!!paymentModalEvent}
+        onClose={() => setPaymentModalEvent(null)}
+        event={paymentModalEvent}
+        onSuccess={fetchDashboardData}
       />
     </div>
   );
