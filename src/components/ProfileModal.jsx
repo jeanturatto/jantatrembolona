@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Camera, Lock, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { Camera, Lock, CheckCircle, AlertCircle, Loader2, RefreshCw } from 'lucide-react';
 import { Modal } from './Modal';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -171,6 +171,20 @@ export const ProfileModal = ({ isOpen, onClose, user, profile, onSave }) => {
     }
   };
 
+  const handleForceUpdate = async () => {
+    if ('serviceWorker' in navigator) {
+      try {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (let registration of registrations) {
+          await registration.unregister();
+        }
+      } catch (err) {
+        console.error('SW unregister error', err);
+      }
+    }
+    window.location.href = window.location.href.split('?')[0] + '?t=' + new Date().getTime();
+  };
+
   const inputClass = "w-full p-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:border-zinc-900 dark:focus:border-white transition-all text-sm font-medium text-zinc-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed";
   const inputReadOnly = "w-full p-3 bg-zinc-100 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm text-zinc-400 dark:text-zinc-500 cursor-not-allowed";
   const labelClass = "text-[10px] font-bold uppercase text-zinc-400";
@@ -219,6 +233,16 @@ export const ProfileModal = ({ isOpen, onClose, user, profile, onSave }) => {
               <p className={`text-xl font-bold ${stats.perc >= 70 ? 'text-green-600' : stats.perc >= 50 ? 'text-amber-500' : 'text-red-500'}`}>{stats.perc}%</p>
               <p className={labelClass}>Partic.</p>
             </div>
+          </div>
+
+          <div className="mt-2 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+            <button
+              onClick={handleForceUpdate}
+              className="w-full p-2.5 bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 text-blue-600 dark:text-blue-400 rounded-xl font-bold text-xs flex items-center justify-center gap-2 hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-colors"
+            >
+              <RefreshCw size={14} /> Forçar Atualização
+            </button>
+            <p className="text-[9px] text-zinc-400 text-center mt-1.5 uppercase font-medium tracking-wider">Limpar cache do aplicativo</p>
           </div>
         </div>
 
