@@ -55,7 +55,7 @@ export default function DashboardPage() {
   const [pendingPaymentEvent, setPendingPaymentEvent] = useState(null);
   const [paymentModalEvent, setPaymentModalEvent] = useState(null);
   // Ranking
-  const [activeTab, setActiveTab] = useState('Todas');
+  const [activeTab, setActiveTab] = useState('Abertas');
   const [ranking, setRanking] = useState([]);
 
   const fetchDashboardData = useCallback(async () => {
