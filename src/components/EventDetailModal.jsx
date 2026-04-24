@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { MapPin, Calendar, Users, Utensils, CheckCircle2, XCircle, AlertCircle, Lock, Edit3, UserPlus, X, Plus } from 'lucide-react';
+import { MapPin, Calendar, Users, Utensils, CheckCircle2, XCircle, AlertCircle, Lock, Edit3, UserPlus, X, Plus, MessageSquare } from 'lucide-react';
 import { Modal } from './Modal';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
