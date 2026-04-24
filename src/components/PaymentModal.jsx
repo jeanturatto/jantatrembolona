@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase';
 export const PaymentModal = ({ isOpen, onClose, event, onSuccess }) => {
   const [totalValue, setTotalValue] = useState('');
   const [attendees, setAttendees] = useState([]);
+  const [guestNames, setGuestNames] = useState([]);
   const [responsaveis, setResponsaveis] = useState([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -19,6 +20,8 @@ export const PaymentModal = ({ isOpen, onClose, event, onSuccess }) => {
 
     setGeneratedMessage('');
     setCopied(false);
+    // Carrega convidados do evento
+    setGuestNames(Array.isArray(event?.guests) ? event.guests : []);
 
     const fetchData = async () => {
       setLoading(true);
@@ -69,7 +72,7 @@ export const PaymentModal = ({ isOpen, onClose, event, onSuccess }) => {
   }, [isOpen, event?.id]);
 
   const totalNum = parseFloat((totalValue || '0').replace(',', '.')) || 0;
-  const numPeople = attendees.length || 1;
+  const numPeople = (attendees.length + guestNames.length) || 1;
   const perPerson = totalNum > 0 ? Math.ceil(totalNum / numPeople) : 0;
 
   const buildMessage = () => {
@@ -78,8 +81,12 @@ export const PaymentModal = ({ isOpen, onClose, event, onSuccess }) => {
     const pixLines = recebedor && recebedor.pix ? `💳 PIX (${recebedor.name}): ${recebedor.pix}` : '';
 
     const participantesStr = attendees.map(n => `❌ ${n}`).join('\n');
+    const convidadosStr = guestNames.length > 0
+      ? guestNames.map(n => `👥 ${n} (convidado)`).join('\n')
+      : '';
     const dateStr = event?.dateFormatted || event?.date || '';
     const location = event?.rawLocation || event?.location || '';
+    const totalPessoas = attendees.length + guestNames.length;
 
     return [
       `🍽️ *${event?.name || 'Janta'}*`,
@@ -87,8 +94,9 @@ export const PaymentModal = ({ isOpen, onClose, event, onSuccess }) => {
       location ? `🏠 ${location}` : null,
       responsaveisNomes ? `👨‍🍳 Responsáveis: ${responsaveisNomes}` : null,
       '',
-      `Participantes (${numPeople} ${numPeople === 1 ? 'pessoa' : 'pessoas'}):`,
+      `Participantes (${totalPessoas} ${totalPessoas === 1 ? 'pessoa' : 'pessoas'}):`,
       participantesStr,
+      convidadosStr || null,
       '',
       `💰 Valor total: R$ ${totalNum.toFixed(2).replace('.', ',')}`,
       `👥 Divisão: R$ ${perPerson},00 por pessoa`,
@@ -162,20 +170,32 @@ export const PaymentModal = ({ isOpen, onClose, event, onSuccess }) => {
           <div className="p-4 bg-zinc-50 dark:bg-zinc-800/60 rounded-xl border border-zinc-100 dark:border-zinc-700 space-y-1">
             <p className="font-bold text-zinc-900 dark:text-white capitalize text-sm leading-tight">{event.name}</p>
             <p className="text-xs text-zinc-400 capitalize">{event.dateFormatted || event.date}</p>
-            <div className="flex items-center gap-1.5 mt-2">
-              <Users size={12} className="text-zinc-400" />
-              <span className="text-xs text-zinc-500 font-medium">{attendees.length} participantes confirmados</span>
+            <div className="flex items-center gap-3 mt-2 flex-wrap">
+              <div className="flex items-center gap-1.5">
+                <Users size={12} className="text-zinc-400" />
+                <span className="text-xs text-zinc-500 font-medium">{attendees.length} confirmados</span>
+              </div>
+              {guestNames.length > 0 && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-violet-500 font-bold">+{guestNames.length} convidado{guestNames.length > 1 ? 's' : ''}</span>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Lista de participantes */}
-          {attendees.length > 0 && (
+          {/* Lista de participantes + convidados */}
+          {(attendees.length > 0 || guestNames.length > 0) && (
             <div className="space-y-1.5">
               <p className="text-[10px] font-bold uppercase text-zinc-400 tracking-wider">Participantes</p>
               <div className="flex flex-wrap gap-1.5">
                 {attendees.map((name, i) => (
                   <span key={i} className="px-2.5 py-1 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/40 text-green-700 dark:text-green-400 rounded-full text-[11px] font-semibold">
                     {name}
+                  </span>
+                ))}
+                {guestNames.map((name, i) => (
+                  <span key={`g-${i}`} className="px-2.5 py-1 bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800/40 text-violet-700 dark:text-violet-400 rounded-full text-[11px] font-semibold">
+                    {name} <span className="opacity-60 text-[10px]">(conv.)</span>
                   </span>
                 ))}
               </div>
@@ -200,7 +220,7 @@ export const PaymentModal = ({ isOpen, onClose, event, onSuccess }) => {
           </div>
 
           {/* Preview da divisão */}
-          {totalNum > 0 && attendees.length > 0 && (
+          {totalNum > 0 && (attendees.length > 0 || guestNames.length > 0) && (
             <div className="flex items-center gap-3 p-4 bg-[#2842B5]/[0.06] dark:bg-[#2842B5]/10 border border-[#2842B5]/15 rounded-xl">
               <Calculator size={18} className="text-[#2842B5] dark:text-[#B8ABCF] shrink-0" />
               <div>
@@ -210,6 +230,7 @@ export const PaymentModal = ({ isOpen, onClose, event, onSuccess }) => {
                 </p>
                 <p className="text-[11px] text-zinc-400 mt-0.5">
                   R$ {totalNum.toFixed(2).replace('.', ',')} ÷ {numPeople} pessoas
+                  {guestNames.length > 0 && ` (${attendees.length} confirmados + ${guestNames.length} convidados)`}
                 </p>
               </div>
             </div>

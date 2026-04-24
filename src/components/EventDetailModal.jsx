@@ -156,7 +156,7 @@ export const EventDetailModal = ({
             </div>
           </div>
 
-          {/* Convidados — visível para todos se houver, editável para responsáveis/admin */}
+          {/* Convidados — contagem visível para todos, nomes apenas para responsáveis/admin */}
           {(guests.length > 0 || canManageGuests) && (
             <div className="p-3 bg-violet-50 dark:bg-violet-900/10 border border-violet-100 dark:border-violet-800/30 rounded-xl space-y-3">
               <div className="flex items-center justify-between">
@@ -171,8 +171,8 @@ export const EventDetailModal = ({
                 </div>
               </div>
 
-              {/* Lista de nomes */}
-              {guests.length > 0 && (
+              {/* Lista de nomes — apenas responsáveis e admins */}
+              {canManageGuests && guests.length > 0 && (
                 <div className="space-y-1.5">
                   {guests.map((name, idx) => (
                     <div
@@ -185,16 +185,14 @@ export const EventDetailModal = ({
                         </div>
                         <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200 capitalize">{name}</span>
                       </div>
-                      {canManageGuests && (
-                        <button
-                          onClick={() => handleRemoveGuest(idx)}
-                          disabled={guestsLoading}
-                          className="p-1 text-zinc-300 dark:text-zinc-600 hover:text-red-500 dark:hover:text-red-400 transition-colors rounded disabled:opacity-40"
-                          title="Remover convidado"
-                        >
-                          <X size={13} />
-                        </button>
-                      )}
+                      <button
+                        onClick={() => handleRemoveGuest(idx)}
+                        disabled={guestsLoading}
+                        className="p-1 text-zinc-300 dark:text-zinc-600 hover:text-red-500 dark:hover:text-red-400 transition-colors rounded disabled:opacity-40"
+                        title="Remover convidado"
+                      >
+                        <X size={13} />
+                      </button>
                     </div>
                   ))}
                 </div>
