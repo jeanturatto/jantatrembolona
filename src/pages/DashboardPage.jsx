@@ -207,6 +207,20 @@ export default function DashboardPage() {
             guests: Array.isArray(j.guests) ? j.guests : [],
           };
         });
+
+        // Ordenação inteligente: Abertas (crescente -> próxima janta primeiro),
+        // Fechadas (decrescente -> recém concluída primeiro).
+        formattedJantas.sort((a, b) => {
+          if (a.status === 'Aberto' && b.status === 'Aberto') {
+            return new Date(a.rawDate) - new Date(b.rawDate);
+          }
+          if (a.status !== 'Aberto' && b.status !== 'Aberto') {
+            return new Date(b.rawDate) - new Date(a.rawDate);
+          }
+          if (a.status === 'Aberto') return -1;
+          return 1;
+        });
+
         setJantas(formattedJantas);
 
         const userTotalExpected = attendances?.length || 0;
@@ -664,60 +678,6 @@ export default function DashboardPage() {
         </section>
       )}
 
-      {/* ── Jantas Recentes ── */}
-      <section className="space-y-3">
-        <div className="flex justify-between items-center">
-          <h2 className="text-base font-semibold text-zinc-900 dark:text-white tracking-tight">
-            {activeTab === 'Todas' ? 'Todas as Jantas' :
-             activeTab === 'Abertas' ? 'Jantas Abertas' :
-             'Jantas Concluídas'}
-          </h2>
-          <Link to="/jantas" className="text-xs font-medium text-[#2842B5] dark:text-[#B8ABCF] hover:underline underline-offset-2">
-            Ver todas →
-          </Link>
-        </div>
-        <div className="space-y-2">
-          {jantas
-            .filter(j => {
-              if (activeTab === 'Todas') return j.status !== 'Cancelado';
-              if (activeTab === 'Abertas') return j.status === 'Aberto';
-              if (activeTab === 'Concluídas') return j.status === 'Finalizado';
-              return j.status !== 'Cancelado';
-            })
-            .map(janta => (
-            <Card
-              key={janta.id}
-              onClick={() => setDetailEvent(janta)}
-              className="!py-3 !px-4 flex items-center justify-between hover:border-[#2842B5]/20 dark:hover:border-white/[0.12] transition-colors cursor-pointer"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-9 h-9 rounded-xl bg-[#2842B5]/08 dark:bg-[#2842B5]/15 flex items-center justify-center shrink-0">
-                  <Calendar size={15} className="text-[#2842B5] dark:text-[#B8ABCF]" />
-                </div>
-                <div className="min-w-0">
-                  <p className="font-semibold text-sm text-zinc-900 dark:text-white capitalize truncate">{janta.name}</p>
-                  <p className="text-xs text-zinc-400 dark:text-[#5a5a80] capitalize mt-0.5">{janta.date}</p>
-                </div>
-              </div>
-              <span className={`text-[10px] font-semibold uppercase px-2.5 py-1 rounded-full border shrink-0 ml-2 tracking-wide ${
-                janta.status === 'Aberto'
-                  ? 'bg-[#2842B5]/08 border-[#2842B5]/20 text-[#2842B5] dark:bg-[#2842B5]/15 dark:border-[#2842B5]/30 dark:text-[#B8ABCF]'
-                  : 'bg-zinc-50 dark:bg-white/[0.03] border-zinc-100 dark:border-white/[0.05] text-zinc-400 dark:text-[#5a5a80]'
-              }`}>
-                {janta.status === 'Finalizado' ? 'Concluída' : janta.status}
-              </span>
-            </Card>
-          ))}
-          {jantas.filter(j => {
-              if (activeTab === 'Todas') return j.status !== 'Cancelado';
-              if (activeTab === 'Abertas') return j.status === 'Aberto';
-              if (activeTab === 'Concluídas') return j.status === 'Finalizado';
-              return j.status !== 'Cancelado';
-            }).length === 0 && (
-            <p className="text-sm text-zinc-400 dark:text-[#5a5a80] py-4 text-center">Nenhuma janta nesta categoria.</p>
-          )}
-        </div>
-      </section>
 
       <JustificativaModal
         isOpen={isJustModalOpen}
