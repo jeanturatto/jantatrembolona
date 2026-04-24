@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Users, Utensils, Lock, Pencil, Eye, CheckCheck, XCircle, UserCog, Trash2, Receipt, MapPin, Star } from 'lucide-react';
+import { Plus, Users, Utensils, Lock, Pencil, CheckCheck, XCircle, UserCog, Trash2, MapPin, Star, UserPlus, X } from 'lucide-react';
 import { Card } from '../components/Card';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -54,6 +54,10 @@ export default function JantasPage() {
   const [ratingEvent, setRatingEvent] = useState(null);
   const [ratingLoading, setRatingLoading] = useState(false);
   const [myRatingsIds, setMyRatingsIds] = useState(new Set());
+  // Convidar guests
+  const [convidarEventId, setConvidarEventId] = useState(null);
+  const [convidarCount, setConvidarCount] = useState(0);
+  const [convidarLoading, setConvidarLoading] = useState(false);
 
   const fetchJantas = useCallback(async () => {
     if (!user?.id) return;
@@ -61,7 +65,7 @@ export default function JantasPage() {
       const [{ data, error }, { data: myRatings }] = await Promise.all([
         supabase
           .from('events')
-          .select('*, attendances(user_id, status)')
+          .select('*, attendances(user_id, status), guests_count')
           .order('date', { ascending: false }),
         supabase
           .from('ratings')
@@ -114,6 +118,7 @@ export default function JantasPage() {
             userStatus: userAtt ? userAtt.status : null,
             created_by: j.created_by,
             payment_value: j.payment_value || null,
+            guests_count: j.guests_count || 0,
           };
         });
 
@@ -170,10 +175,32 @@ export default function JantasPage() {
     fetchAusencias();
   }, [user.id, jantas]);
 
+  const handleConvidarOpen = (janta) => {
+    setConvidarEventId(janta.id);
+    setConvidarCount(janta.guests_count || 0);
+  };
+
+  const handleConvidarSave = async () => {
+    setConvidarLoading(true);
+    try {
+      const { error } = await supabase
+        .from('events')
+        .update({ guests_count: convidarCount })
+        .eq('id', convidarEventId);
+      if (error) throw error;
+      await fetchJantas();
+      setConvidarEventId(null);
+    } catch (err) {
+      alert('Erro ao salvar convidados: ' + (err.message || 'Erro desconhecido.'));
+    } finally {
+      setConvidarLoading(false);
+    }
+  };
+
   const handleAttendance = async (eventId, statusParam, justificativa = null) => {
     const janta = jantas.find(j => j.id === eventId);
     if (janta && isEventPastDeadline(janta.rawDate)) {
-      alert('O prazo de confirmação encerrou às 16:00 (horário de Brasília).');
+      alert('O prazo de confirmação encerrou às 12:00 do dia da janta (horário de Brasília).');
       return;
     }
     setActionLoading(eventId);
@@ -216,7 +243,7 @@ export default function JantasPage() {
   const handleJustificado = (eventId) => {
     const janta = jantas.find(j => j.id === eventId);
     if (janta && isEventPastDeadline(janta.rawDate)) {
-      alert('O prazo de confirmação encerrou às 16:00 (horário de Brasília).');
+      alert('O prazo de confirmação encerrou às 12:00 do dia da janta (horário de Brasília).');
       return;
     }
     setJustEventId(eventId); setIsJustModalOpen(true); 
@@ -231,7 +258,7 @@ export default function JantasPage() {
   const handleNaoVou = (eventId) => {
     const janta = jantas.find(j => j.id === eventId);
     if (janta && isEventPastDeadline(janta.rawDate)) {
-      alert('O prazo de confirmação encerrou às 16:00 (horário de Brasília).');
+      alert('O prazo de confirmação encerrou às 12:00 do dia da janta (horário de Brasília).');
       return;
     }
     if (ausenciasNoMes >= LIMITE_AUSENCIAS) {
@@ -367,8 +394,20 @@ export default function JantasPage() {
                   <div className="flex items-center gap-2">
                     <Users size={14} className="text-zinc-400" />
                     <span className="text-sm font-bold">{janta.attendees}</span>
+                    {janta.guests_count > 0 && (
+                      <span className="text-[10px] text-violet-500 font-bold">+{janta.guests_count} conv.</span>
+                    )}
                   </div>
                   <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-tighter">Confirmados</span>
+                  {/* Botão Convidar: apenas responsáveis e admin em jantas abertas */}
+                  {janta.status === 'Aberto' && (janta.responsibles.includes(user.id) || isAdmin) && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleConvidarOpen(janta); }}
+                      className="flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg border border-violet-200 text-violet-600 bg-violet-50 dark:bg-violet-900/10 dark:border-violet-700 hover:bg-violet-100 transition-colors"
+                    >
+                      <UserPlus size={11} /> Convidar
+                    </button>
+                  )}
                 </div>
 
                 <div 
@@ -525,6 +564,40 @@ export default function JantasPage() {
         onSubmit={handleRatingSubmit}
         loading={ratingLoading}
       />
+
+      {/* Modal Convidar */}
+      {convidarEventId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl p-6 w-full max-w-xs flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+                <UserPlus size={16} className="text-violet-500" /> Convidados
+              </h2>
+              <button onClick={() => setConvidarEventId(null)} className="p-1 text-zinc-400 hover:text-zinc-700 rounded-lg"><X size={16} /></button>
+            </div>
+            <p className="text-xs text-zinc-500">Adicione convidados externos. Eles não entram nas estatísticas, apenas na cobrança.</p>
+            <div className="flex items-center justify-center gap-4">
+              <button
+                onClick={() => setConvidarCount(c => Math.max(0, c - 1))}
+                className="w-10 h-10 rounded-xl border-2 border-zinc-200 dark:border-zinc-700 text-xl font-bold text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors flex items-center justify-center"
+              >−</button>
+              <span className="text-3xl font-extrabold text-zinc-900 dark:text-white w-12 text-center">{convidarCount}</span>
+              <button
+                onClick={() => setConvidarCount(c => c + 1)}
+                className="w-10 h-10 rounded-xl border-2 border-violet-300 dark:border-violet-700 text-xl font-bold text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-colors flex items-center justify-center"
+              >+</button>
+            </div>
+            <div className="flex gap-2 mt-2">
+              <button onClick={() => setConvidarEventId(null)} className="flex-1 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm font-bold text-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">Cancelar</button>
+              <button
+                onClick={handleConvidarSave}
+                disabled={convidarLoading}
+                className="flex-1 py-2.5 rounded-xl bg-violet-600 text-white text-sm font-bold hover:bg-violet-700 transition-colors disabled:opacity-60"
+              >{convidarLoading ? 'Salvando...' : 'Salvar'}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

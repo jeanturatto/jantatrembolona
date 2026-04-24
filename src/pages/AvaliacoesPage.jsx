@@ -199,18 +199,23 @@ export default function AvaliacoesPage() {
                     .map(rating => (
                       <div key={rating.id} className="flex items-start gap-3 px-4 py-4">
 
-                        {/* Avatar do avaliador */}
-                        <div className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-700 flex items-center justify-center text-[11px] font-bold text-zinc-600 dark:text-zinc-200 shrink-0 overflow-hidden border border-zinc-200 dark:border-zinc-600">
-                          {rating.reviewerAvatar
-                            ? <img src={rating.reviewerAvatar} alt={rating.reviewerInitial} className="w-full h-full object-cover" />
-                            : rating.reviewerInitial}
-                        </div>
+                        {/* Avatar do avaliador — apenas admin */}
+                        {isAdmin && (
+                          <div className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-700 flex items-center justify-center text-[11px] font-bold text-zinc-600 dark:text-zinc-200 shrink-0 overflow-hidden border border-zinc-200 dark:border-zinc-600">
+                            {rating.reviewerAvatar
+                              ? <img src={rating.reviewerAvatar} alt={rating.reviewerInitial} className="w-full h-full object-cover" />
+                              : rating.reviewerInitial}
+                          </div>
+                        )}
 
                         <div className="flex-1 min-w-0">
                           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mb-1">
-                            <span className="text-xs font-bold text-zinc-800 dark:text-zinc-100">
-                              {rating.reviewerName}
-                            </span>
+                            {/* Nome do avaliador — apenas admin */}
+                            {isAdmin && (
+                              <span className="text-xs font-bold text-zinc-800 dark:text-zinc-100">
+                                {rating.reviewerName}
+                              </span>
+                            )}
                             <StarDisplay value={rating.stars} size={11} />
                             <span className="text-[10px] font-bold text-zinc-500">
                               {LABELS[rating.stars]}

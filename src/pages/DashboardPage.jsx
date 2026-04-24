@@ -279,7 +279,7 @@ export default function DashboardPage() {
   const handleAttendance = async (eventId, statusParam, justificativa = null) => {
     const janta = jantas.find(j => j.id === eventId);
     if (janta && isEventPastDeadline(janta.rawDate)) {
-      alert('O prazo de confirmação encerrou às 16:00 do dia anterior (horário de Brasília).');
+      alert('O prazo de confirmação encerrou às 12:00 do dia da janta (horário de Brasília).');
       return;
     }
     setActionLoading(true);
@@ -378,7 +378,7 @@ export default function DashboardPage() {
           </div>
           
           <div className="hidden md:flex gap-4">
-            {['Todas', 'Abertas', 'Fechadas', 'Concluídas'].map(tab => (
+            {['Todas', 'Abertas', 'Concluídas'].map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -396,7 +396,7 @@ export default function DashboardPage() {
         
         {/* Mobile Tabs */}
         <div className="flex md:hidden gap-3 mt-4 overflow-x-auto w-full no-scrollbar">
-          {['Todas', 'Abertas', 'Fechadas', 'Concluídas'].map(tab => (
+          {['Todas', 'Abertas', 'Concluídas'].map(tab => (
              <button
              key={tab}
              onClick={() => setActiveTab(tab)}
@@ -450,11 +450,10 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {jantas
           .filter(j => {
-             if (activeTab === 'Todas') return true;
+             if (activeTab === 'Todas') return j.status !== 'Cancelado';
              if (activeTab === 'Abertas') return j.status === 'Aberto';
-             if (activeTab === 'Fechadas') return j.status === 'Fechado';
              if (activeTab === 'Concluídas') return j.status === 'Finalizado';
-             return true;
+             return j.status !== 'Cancelado';
           })
           .map(janta => (
           <Card key={janta.id} className="!p-6 flex flex-col justify-between min-h-[220px]" onClick={undefined}>
@@ -484,9 +483,6 @@ export default function DashboardPage() {
 
               {janta.status === 'Aberto' && (
                 <span className="bg-zinc-900 text-white text-[9px] font-extrabold uppercase px-3 py-1 rounded-full tracking-wider">Aberta</span>
-              )}
-              {janta.status === 'Fechado' && (
-                <span className="bg-zinc-100 text-zinc-500 font-extrabold text-[9px] uppercase px-3 py-1 rounded-full tracking-wider">Fechada</span>
               )}
               {janta.status === 'Finalizado' && (
                 <span className="flex items-center gap-1 bg-zinc-100 text-zinc-500 font-extrabold text-[9px] uppercase px-3 py-1 rounded-full tracking-wider">
@@ -602,11 +598,10 @@ export default function DashboardPage() {
           </Card>
         ))}
         {jantas.filter(j => {
-             if (activeTab === 'Todas') return true;
+             if (activeTab === 'Todas') return j.status !== 'Cancelado';
              if (activeTab === 'Abertas') return j.status === 'Aberto';
-             if (activeTab === 'Fechadas') return j.status === 'Fechado';
              if (activeTab === 'Concluídas') return j.status === 'Finalizado';
-             return true;
+             return j.status !== 'Cancelado';
           }).length === 0 && !loading && (
           <p className="text-sm text-zinc-400 dark:text-[#5a5a80] py-4 text-center md:col-span-2">Nenhuma janta encontrada nos filtros atuais.</p>
         )}
@@ -669,7 +664,6 @@ export default function DashboardPage() {
           <h2 className="text-base font-semibold text-zinc-900 dark:text-white tracking-tight">
             {activeTab === 'Todas' ? 'Todas as Jantas' :
              activeTab === 'Abertas' ? 'Jantas Abertas' :
-             activeTab === 'Fechadas' ? 'Jantas Fechadas' :
              'Jantas Concluídas'}
           </h2>
           <Link to="/jantas" className="text-xs font-medium text-[#2842B5] dark:text-[#B8ABCF] hover:underline underline-offset-2">
@@ -679,11 +673,10 @@ export default function DashboardPage() {
         <div className="space-y-2">
           {jantas
             .filter(j => {
-              if (activeTab === 'Todas') return true;
+              if (activeTab === 'Todas') return j.status !== 'Cancelado';
               if (activeTab === 'Abertas') return j.status === 'Aberto';
-              if (activeTab === 'Fechadas') return j.status === 'Fechado';
               if (activeTab === 'Concluídas') return j.status === 'Finalizado';
-              return true;
+              return j.status !== 'Cancelado';
             })
             .map(janta => (
             <Card
@@ -703,20 +696,17 @@ export default function DashboardPage() {
               <span className={`text-[10px] font-semibold uppercase px-2.5 py-1 rounded-full border shrink-0 ml-2 tracking-wide ${
                 janta.status === 'Aberto'
                   ? 'bg-[#2842B5]/08 border-[#2842B5]/20 text-[#2842B5] dark:bg-[#2842B5]/15 dark:border-[#2842B5]/30 dark:text-[#B8ABCF]'
-                  : janta.status === 'Fechado'
-                  ? 'bg-amber-50 border-amber-200 text-amber-600 dark:bg-amber-500/10 dark:border-amber-500/20 dark:text-amber-400'
                   : 'bg-zinc-50 dark:bg-white/[0.03] border-zinc-100 dark:border-white/[0.05] text-zinc-400 dark:text-[#5a5a80]'
               }`}>
-                {janta.status === 'Finalizado' ? 'Concluída' : janta.status === 'Fechado' ? 'Fechada' : janta.status}
+                {janta.status === 'Finalizado' ? 'Concluída' : janta.status}
               </span>
             </Card>
           ))}
           {jantas.filter(j => {
-              if (activeTab === 'Todas') return true;
+              if (activeTab === 'Todas') return j.status !== 'Cancelado';
               if (activeTab === 'Abertas') return j.status === 'Aberto';
-              if (activeTab === 'Fechadas') return j.status === 'Fechado';
               if (activeTab === 'Concluídas') return j.status === 'Finalizado';
-              return true;
+              return j.status !== 'Cancelado';
             }).length === 0 && (
             <p className="text-sm text-zinc-400 dark:text-[#5a5a80] py-4 text-center">Nenhuma janta nesta categoria.</p>
           )}
