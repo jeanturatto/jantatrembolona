@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { MapPin, Calendar, Users, Utensils, CheckCircle2, XCircle, AlertCircle, Lock, Edit3, UserPlus, X, Plus, MessageSquare } from 'lucide-react';
+import { MapPin, Calendar, Users, Utensils, CheckCircle2, XCircle, AlertCircle, Lock, Edit3, UserPlus, X, Plus, MessageSquare, ChevronDown } from 'lucide-react';
 import { Modal } from './Modal';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -35,6 +35,7 @@ export const EventDetailModal = ({
   const [guests, setGuests] = useState([]);
   const [newGuestName, setNewGuestName] = useState('');
   const [guestsLoading, setGuestsLoading] = useState(false);
+  const [showAttendeesList, setShowAttendeesList] = useState(false);
 
   const isUserResponsible = event?.responsibles?.includes(user?.id);
   const canManageGuests = isUserResponsible || isAdmin;
@@ -149,12 +150,39 @@ export const EventDetailModal = ({
           )}
 
           {/* Confirmados */}
-          <div className="flex items-center gap-3 p-3 bg-zinc-50 dark:bg-zinc-800 rounded-xl">
-            <Users size={16} className="text-zinc-400 shrink-0" />
-            <div>
-              <p className="text-[10px] font-bold text-zinc-400 uppercase">Confirmados</p>
-              <p className="text-sm font-bold text-zinc-900 dark:text-white">{event.attendees} presentes</p>
+          <div className="flex flex-col gap-2 p-3 bg-zinc-50 dark:bg-zinc-800 rounded-xl">
+            <div 
+              className="flex items-center justify-between cursor-pointer group"
+              onClick={() => setShowAttendeesList(!showAttendeesList)}
+            >
+              <div className="flex items-center gap-3">
+                <Users size={16} className="text-zinc-400 shrink-0" />
+                <div>
+                  <p className="text-[10px] font-bold text-zinc-400 uppercase">Confirmados</p>
+                  <p className="text-sm font-bold text-zinc-900 dark:text-white">{event.attendees} presentes</p>
+                </div>
+              </div>
+              <button className="p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">
+                <ChevronDown size={18} className={`transition-transform duration-200 ${showAttendeesList ? 'rotate-180' : ''}`} />
+              </button>
             </div>
+            
+            {showAttendeesList && event.allAttendeesList && event.allAttendeesList.length > 0 && (
+              <div className="mt-2 space-y-1.5 border-t border-zinc-200 dark:border-zinc-700 pt-2 animate-in slide-in-from-top-2 fade-in duration-200">
+                {event.allAttendeesList.map((att, idx) => (
+                  <div key={idx} className="flex items-center gap-2 p-1.5 bg-white dark:bg-zinc-900/50 rounded-lg border border-zinc-100 dark:border-zinc-800/50">
+                    <div className="w-6 h-6 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center text-[10px] font-bold text-green-600 dark:text-green-300 shrink-0 overflow-hidden">
+                      {att.avatar_url ? (
+                        <img src={att.avatar_url} alt={att.initial} className="w-full h-full object-cover" />
+                      ) : (
+                        att.initial
+                      )}
+                    </div>
+                    <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200 capitalize truncate">{att.name}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Convidados — contagem visível para todos, nomes apenas para responsáveis/admin */}

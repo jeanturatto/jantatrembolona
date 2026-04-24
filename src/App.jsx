@@ -75,7 +75,11 @@ export default function App() {
             {/* Rotas protegidas (com Layout) */}
             <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
               <Route index element={<DashboardPage />} />
-              <Route path="jantas" element={<JantasPage />} />
+              <Route path="jantas" element={
+                <ProtectedRoute requireAdmin={true}>
+                  <JantasPage />
+                </ProtectedRoute>
+              } />
               <Route path="avaliacoes" element={<AvaliacoesPage />} />
               <Route path="relatorios" element={<RelatoriosPage />} />
               <Route path="admin" element={

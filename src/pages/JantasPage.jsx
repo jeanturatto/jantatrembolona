@@ -60,7 +60,7 @@ export default function JantasPage() {
   const fetchJantas = useCallback(async () => {
     if (!user?.id) return;
     try {
-      const [{ data, error }, { data: myRatings }] = await Promise.all([
+      const [{ data, error }, { data: myRatings }, { data: profiles }] = await Promise.all([
         supabase
           .from('events')
           .select('*, attendances(user_id, status)')
@@ -68,7 +68,10 @@ export default function JantasPage() {
         supabase
           .from('ratings')
           .select('event_id')
-          .eq('user_id', user.id)
+          .eq('user_id', user.id),
+        supabase
+          .from('profiles')
+          .select('id, name, avatar_url')
       ]);
 
       if (error) {
@@ -96,6 +99,13 @@ export default function JantasPage() {
 
         setMyRatingsIds(new Set((myRatings || []).map(r => r.event_id)));
 
+        const profileMap = Object.fromEntries(
+          (profiles || []).map(p => [p.id, {
+            name: p.name || p.email?.split('@')[0] || 'U',
+            avatar_url: p.avatar_url || null,
+          }])
+        );
+
         const formattedJantas = data.map(j => {
           const presentes = j.attendances?.filter(a => a.status === 'Presente') || [];
           const userAtt = j.attendances?.find(a => a.user_id === user.id);
@@ -113,6 +123,12 @@ export default function JantasPage() {
             responsibles: j.responsibles || [],
             responsiblesLabel: `${j.responsibles?.length || 0} responsável(is)`,
             attendees: presentes.length,
+            allAttendeesList: presentes.map(a => ({
+              id: a.user_id,
+              name: profileMap[a.user_id]?.name || 'U',
+              avatar_url: profileMap[a.user_id]?.avatar_url || null,
+              initial: (profileMap[a.user_id]?.name || 'U').charAt(0).toUpperCase(),
+            })),
             userStatus: userAtt ? userAtt.status : null,
             created_by: j.created_by,
             payment_value: j.payment_value || null,
