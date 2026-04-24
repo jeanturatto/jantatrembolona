@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Users, Utensils, Lock, Pencil, CheckCheck, XCircle, UserCog, Trash2, MapPin, Star, UserPlus } from 'lucide-react';
+import { Plus, Users, Utensils, Lock, Pencil, CheckCheck, XCircle, UserCog, Trash2, MapPin, Star, UserPlus, MessageSquare } from 'lucide-react';
 import { Card } from '../components/Card';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -10,6 +10,7 @@ import { JustificativaModal } from '../components/JustificativaModal';
 import { AdminAttendanceModal } from '../components/AdminAttendanceModal';
 import { PaymentModal } from '../components/PaymentModal';
 import { RatingModal } from '../components/RatingModal';
+import { ConfirmacaoModal } from '../components/ConfirmacaoModal';
 
 // Regra: o prazo de confirmação encerra no DIA ANTERIOR à janta às 16:00 BRT.
 const isEventPastDeadline = (eventDateStr) => {
@@ -54,6 +55,7 @@ export default function JantasPage() {
   const [ratingEvent, setRatingEvent] = useState(null);
   const [ratingLoading, setRatingLoading] = useState(false);
   const [myRatingsIds, setMyRatingsIds] = useState(new Set());
+  const [confirmacaoEvent, setConfirmacaoEvent] = useState(null);
 
   const fetchJantas = useCallback(async () => {
     if (!user?.id) return;
@@ -433,18 +435,27 @@ export default function JantasPage() {
               </div>
             </div>
 
-            {/* Cobrança button (for Finalizado) */}
-            {janta.status === 'Finalizado' && (janta.responsibles.includes(user.id) || (isAdmin && janta.payment_value)) && (
+            {/* Ações após prazo / Finalizado (Admin e Responsáveis) */}
+            {(janta.status === 'Finalizado' || isEventPastDeadline(janta.rawDate)) && (isAdmin || janta.responsibles.includes(user.id)) && janta.status !== 'Cancelado' && (
               <div 
                 className="flex flex-col sm:flex-row flex-wrap gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800"
                 onClick={(e) => e.stopPropagation()}
               >
                 <button
-                  onClick={() => setPaymentEvent(janta)}
-                  className="flex-1 p-3 border-2 border-emerald-200 text-emerald-600 bg-emerald-50 dark:bg-emerald-900/10 dark:border-emerald-800/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/20 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2"
+                  onClick={() => setConfirmacaoEvent(janta)}
+                  className="flex-1 p-3 border-2 border-green-200 text-green-600 bg-green-50 dark:bg-green-900/10 dark:border-green-800/40 hover:bg-green-100 dark:hover:bg-green-900/20 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2"
                 >
-                  <span className="text-xl">💰</span> {janta.payment_value ? 'Ver Cobrança' : 'Gerar Cobrança'}
+                  <MessageSquare size={16} /> Msg WhatsApp
                 </button>
+                
+                {janta.status === 'Finalizado' && (janta.responsibles.includes(user.id) || (isAdmin && janta.payment_value)) && (
+                  <button
+                    onClick={() => setPaymentEvent(janta)}
+                    className="flex-1 p-3 border-2 border-emerald-200 text-emerald-600 bg-emerald-50 dark:bg-emerald-900/10 dark:border-emerald-800/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/20 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2"
+                  >
+                    <span className="text-xl">💰</span> {janta.payment_value ? 'Ver Cobrança' : 'Gerar Cobrança'}
+                  </button>
+                )}
               </div>
             )}
 
@@ -530,6 +541,11 @@ export default function JantasPage() {
         event={ratingEvent}
         onSubmit={handleRatingSubmit}
         loading={ratingLoading}
+      />
+      <ConfirmacaoModal
+        isOpen={!!confirmacaoEvent}
+        onClose={() => setConfirmacaoEvent(null)}
+        event={confirmacaoEvent}
       />
     </div>
   );
