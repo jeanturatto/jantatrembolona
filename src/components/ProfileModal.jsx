@@ -179,122 +179,143 @@ export const ProfileModal = ({ isOpen, onClose, user, profile, onSave }) => {
   const canSave = !uploading && !saving && passwordsMatch && (!newPassword || newPassword.length >= 6);
 
   return (
-    <Modal isOpen={isOpen} onClose={saving ? undefined : onClose} title="Meu Perfil">
-      <div className="space-y-5">
-        {/* Avatar + Name */}
-        <div className="flex items-center gap-4">
-          <label className="relative group cursor-pointer shrink-0">
-            <input type="file" accept="image/*" onChange={handleUpload} disabled={uploading || saving} className="hidden" />
-            <div className="w-16 h-16 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-xl font-bold border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white uppercase overflow-hidden">
-              {avatarUrl
-                ? <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
-                : (name?.charAt(0) || user?.email?.charAt(0) || 'U')
-              }
+    <Modal isOpen={isOpen} onClose={saving ? undefined : onClose} title="Meu Perfil" maxWidthClass="sm:max-w-3xl">
+      <div className="flex flex-col sm:flex-row gap-6">
+        
+        {/* Lado Esquerdo: Avatar, Nome, Stats */}
+        <div className="flex flex-col gap-5 sm:w-[35%] sm:pr-6 sm:border-r border-zinc-100 dark:border-zinc-800 pb-5 sm:pb-0 border-b sm:border-b-0 shrink-0">
+          <div className="flex items-center gap-4">
+            <label className="relative group cursor-pointer shrink-0">
+              <input type="file" accept="image/*" onChange={handleUpload} disabled={uploading || saving} className="hidden" />
+              <div className="w-16 h-16 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-xl font-bold border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white uppercase overflow-hidden">
+                {avatarUrl
+                  ? <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                  : (name?.charAt(0) || user?.email?.charAt(0) || 'U')
+                }
+              </div>
+              <div className="absolute inset-0 bg-black/40 text-white opacity-0 group-hover:opacity-100 transition-opacity rounded-full flex items-center justify-center">
+                {uploading ? <span className="text-[10px] font-bold">...</span> : <Camera size={20} />}
+              </div>
+            </label>
+            <div>
+              <h4 className="font-bold text-lg text-zinc-900 dark:text-white capitalize leading-tight">{name || 'Usuário'}</h4>
+              <span className="px-2 py-0.5 bg-zinc-900 text-white dark:bg-white dark:text-black text-[10px] font-bold rounded-full uppercase mt-1 inline-block">
+                {profile?.role || 'USER'}
+              </span>
             </div>
-            <div className="absolute inset-0 bg-black/40 text-white opacity-0 group-hover:opacity-100 transition-opacity rounded-full flex items-center justify-center">
-              {uploading ? <span className="text-[10px] font-bold">...</span> : <Camera size={20} />}
+          </div>
+
+          {/* Real stats */}
+          <div className="grid grid-cols-3 gap-2 py-4 border-t border-zinc-100 dark:border-zinc-800 mt-2">
+            <div className="text-center">
+              <p className="text-xl font-bold text-green-600">{stats.presencas}</p>
+              <p className={labelClass}>Presenças</p>
             </div>
-          </label>
-          <div>
-            <h4 className="font-bold text-lg text-zinc-900 dark:text-white capitalize">{name || 'Usuário'}</h4>
-            <span className="px-2 py-0.5 bg-zinc-900 text-white dark:bg-white dark:text-black text-[10px] font-bold rounded-full uppercase">
-              {profile?.role || 'USER'}
-            </span>
+            <div className="text-center">
+              <p className="text-xl font-bold text-red-500">{stats.faltas}</p>
+              <p className={labelClass}>Faltas</p>
+            </div>
+            <div className="text-center">
+              <p className={`text-xl font-bold ${stats.perc >= 70 ? 'text-green-600' : stats.perc >= 50 ? 'text-amber-500' : 'text-red-500'}`}>{stats.perc}%</p>
+              <p className={labelClass}>Partic.</p>
+            </div>
           </div>
         </div>
 
-        {/* Feedback de erro/sucesso dentro do modal */}
-        {saveError && (
-          <div className="flex items-center gap-3 p-3 bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 rounded-xl">
-            <AlertCircle size={16} className="text-red-500 shrink-0" />
-            <p className="text-sm text-red-600 dark:text-red-400 font-medium">{saveError}</p>
-          </div>
-        )}
-        {saveSuccess && (
-          <div className="flex items-center gap-3 p-3 bg-green-50 dark:bg-green-500/10 border border-green-100 dark:border-green-500/20 rounded-xl">
-            <CheckCircle size={16} className="text-green-500 shrink-0" />
-            <p className="text-sm text-green-600 dark:text-green-400 font-medium">{saveSuccess}</p>
-          </div>
-        )}
+        {/* Lado Direito: Formulário e Ações */}
+        <div className="flex flex-col gap-5 sm:w-[65%]">
+          {/* Feedback de erro/sucesso dentro do modal */}
+          {saveError && (
+            <div className="flex items-center gap-3 p-3 bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 rounded-xl">
+              <AlertCircle size={16} className="text-red-500 shrink-0" />
+              <p className="text-sm text-red-600 dark:text-red-400 font-medium">{saveError}</p>
+            </div>
+          )}
+          {saveSuccess && (
+            <div className="flex items-center gap-3 p-3 bg-green-50 dark:bg-green-500/10 border border-green-100 dark:border-green-500/20 rounded-xl">
+              <CheckCircle size={16} className="text-green-500 shrink-0" />
+              <p className="text-sm text-green-600 dark:text-green-400 font-medium">{saveSuccess}</p>
+            </div>
+          )}
 
-        {/* Fields */}
-        <div className="space-y-4">
-          <div className="space-y-1">
-            <label className={labelClass}>Nome</label>
-            <input value={name} onChange={e => setName(e.target.value)} className={inputClass} disabled={saving} />
-          </div>
-          <div className="space-y-1">
-            <label className={labelClass}>E-mail</label>
-            <input readOnly value={user?.email || ''} className={inputReadOnly} />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <label className={labelClass}>Telefone</label>
-              <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="(00) 00000-0000" className={inputClass} disabled={saving} />
+          {/* Fields */}
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className={labelClass}>Nome</label>
+                <input value={name} onChange={e => setName(e.target.value)} className={inputClass} disabled={saving} />
+              </div>
+              <div className="space-y-1">
+                <label className={labelClass}>E-mail</label>
+                <input readOnly value={user?.email || ''} className={inputReadOnly} />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className={labelClass}>Telefone</label>
+                <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="(00) 00000-0000" className={inputClass} disabled={saving} />
+              </div>
+              <div className="space-y-1">
+                <label className={labelClass}>PIX</label>
+                <input value={pix} onChange={e => setPix(e.target.value)} placeholder="Sua chave PIX" className={inputClass} disabled={saving} />
+              </div>
             </div>
             <div className="space-y-1">
-              <label className={labelClass}>PIX</label>
-              <input value={pix} onChange={e => setPix(e.target.value)} placeholder="Sua chave PIX" className={inputClass} disabled={saving} />
-            </div>
-          </div>
-          <div className="space-y-1">
-            <label className={labelClass}>Data de Nascimento</label>
-            <input
-              type="date"
-              value={dataNascimento}
-              onChange={e => setDataNascimento(e.target.value)}
-              className={inputClass}
-              disabled={saving}
-              style={{ colorScheme: 'light dark' }}
-            />
-            <p className="text-[10px] text-zinc-400">Usada para o calendário de aniversariantes do grupo.</p>
-          </div>
-
-          {/* Seção Alterar Senha */}
-          <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800 space-y-3">
-            <div className="flex items-center gap-2">
-              <Lock size={13} className="text-zinc-400" />
-              <h5 className="text-xs font-bold text-zinc-900 dark:text-white uppercase tracking-wider">Alterar Senha</h5>
-              <span className="text-[10px] text-zinc-400">(opcional)</span>
-            </div>
-
-            {/* 1º — Senha Atual */}
-            <div className="space-y-1">
-              <label className={labelClass}>Senha Atual</label>
+              <label className={labelClass}>Data de Nascimento</label>
               <input
-                type="password"
-                value={oldPassword}
-                onChange={e => { setOldPassword(e.target.value); setSaveError(''); }}
-                placeholder="Digite sua senha atual"
+                type="date"
+                value={dataNascimento}
+                onChange={e => setDataNascimento(e.target.value)}
                 className={inputClass}
                 disabled={saving}
+                style={{ colorScheme: 'light dark' }}
               />
+              <p className="text-[10px] text-zinc-400">Usada para o calendário de aniversariantes do grupo.</p>
             </div>
 
-            {/* 2º — Nova Senha */}
-            <div className="space-y-1">
-              <label className={labelClass}>Nova Senha</label>
-              <input
-                type="password"
-                value={newPassword}
-                onChange={e => { setNewPassword(e.target.value); setSaveError(''); }}
-                placeholder="Mínimo de 6 caracteres"
-                className={inputClass}
-                disabled={saving}
-              />
-            </div>
+            {/* Seção Alterar Senha */}
+            <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800 space-y-3">
+              <div className="flex items-center gap-2">
+                <Lock size={13} className="text-zinc-400" />
+                <h5 className="text-xs font-bold text-zinc-900 dark:text-white uppercase tracking-wider">Alterar Senha</h5>
+                <span className="text-[10px] text-zinc-400">(opcional)</span>
+              </div>
 
-            {/* 3º — Confirmar Nova Senha */}
-            <div className="space-y-1">
-              <label className={labelClass}>Confirmar Nova Senha</label>
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={e => { setConfirmPassword(e.target.value); setSaveError(''); }}
-                placeholder="Repita a nova senha"
-                className={inputClass}
-                disabled={saving}
-              />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1 sm:col-span-2">
+                  <label className={labelClass}>Senha Atual</label>
+                  <input
+                    type="password"
+                    value={oldPassword}
+                    onChange={e => { setOldPassword(e.target.value); setSaveError(''); }}
+                    placeholder="Digite sua senha atual"
+                    className={inputClass}
+                    disabled={saving}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className={labelClass}>Nova Senha</label>
+                  <input
+                    type="password"
+                    value={newPassword}
+                    onChange={e => { setNewPassword(e.target.value); setSaveError(''); }}
+                    placeholder="Mínimo de 6 caracteres"
+                    className={inputClass}
+                    disabled={saving}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className={labelClass}>Confirmar Nova Senha</label>
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={e => { setConfirmPassword(e.target.value); setSaveError(''); }}
+                    placeholder="Repita a nova senha"
+                    className={inputClass}
+                    disabled={saving}
+                  />
+                </div>
+              </div>
               {confirmPassword && !passwordsMatch && (
                 <p className="text-[10px] font-bold text-red-500 mt-1">As senhas não coincidem.</p>
               )}
@@ -303,44 +324,28 @@ export const ProfileModal = ({ isOpen, onClose, user, profile, onSave }) => {
               )}
             </div>
           </div>
-        </div>
 
-        {/* Real stats */}
-        <div className="grid grid-cols-3 gap-2 py-4 border-y border-zinc-100 dark:border-zinc-800">
-          <div className="text-center">
-            <p className="text-xl font-bold text-green-600">{stats.presencas}</p>
-            <p className={labelClass}>Presenças</p>
+          <div className="flex gap-3 pt-2 mt-auto border-t border-zinc-100 dark:border-zinc-800 pt-4">
+            <button
+              onClick={onClose}
+              disabled={saving}
+              className="flex-1 p-3 border border-zinc-200 dark:border-zinc-700 rounded-xl font-bold text-sm text-zinc-900 dark:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors disabled:opacity-50"
+            >
+              Cancelar
+            </button>
+            <button
+              disabled={!canSave}
+              onClick={handleSave}
+              className="flex-1 p-3 bg-zinc-900 text-white dark:bg-white dark:text-black rounded-xl font-bold text-sm transition-transform active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {saving ? (
+                <>
+                  <Loader2 size={15} className="animate-spin" />
+                  Salvando...
+                </>
+              ) : 'Salvar'}
+            </button>
           </div>
-          <div className="text-center">
-            <p className="text-xl font-bold text-red-500">{stats.faltas}</p>
-            <p className={labelClass}>Faltas</p>
-          </div>
-          <div className="text-center">
-            <p className={`text-xl font-bold ${stats.perc >= 70 ? 'text-green-600' : stats.perc >= 50 ? 'text-amber-500' : 'text-red-500'}`}>{stats.perc}%</p>
-            <p className={labelClass}>Partic.</p>
-          </div>
-        </div>
-
-        <div className="flex gap-3">
-          <button
-            onClick={onClose}
-            disabled={saving}
-            className="flex-1 p-3 border border-zinc-200 dark:border-zinc-700 rounded-xl font-bold text-sm text-zinc-900 dark:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors disabled:opacity-50"
-          >
-            Cancelar
-          </button>
-          <button
-            disabled={!canSave}
-            onClick={handleSave}
-            className="flex-1 p-3 bg-zinc-900 text-white dark:bg-white dark:text-black rounded-xl font-bold text-sm transition-transform active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {saving ? (
-              <>
-                <Loader2 size={15} className="animate-spin" />
-                Salvando...
-              </>
-            ) : 'Salvar'}
-          </button>
         </div>
       </div>
     </Modal>

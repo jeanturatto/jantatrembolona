@@ -37,7 +37,7 @@ const isEventPastDeadline = (eventDateStr) => {
 export default function JantasPage() {
   const { user, isAdmin } = useAuth();
   const [jantas, setJantas] = useState([]);
-  const [filter, setFilter] = useState('Todas');
+  const [filter, setFilter] = useState('Abertas');
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(null);
 
@@ -391,21 +391,7 @@ export default function JantasPage() {
                     </button>
                   )}
 
-                  {/* Admin/Responsável: Gerar Cobrança (somente Finalizado) */}
-                  {janta.status === 'Finalizado' && janta.responsibles.includes(user.id) && (
-                    <button onClick={() => setPaymentEvent(janta)}
-                      className="flex items-center gap-1 text-[10px] font-bold px-2.5 py-1.5 rounded-lg border border-emerald-200 text-emerald-600 bg-emerald-50 dark:bg-emerald-900/10 dark:border-emerald-800/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/20 transition-colors">
-                      <Receipt size={12} />
-                      {janta.payment_value ? 'Ver Cobrança' : 'Gerar Cobrança'}
-                    </button>
-                  )}
                   {/* Admin: Ver/editar cobrança gerada por responsável */}
-                  {janta.status === 'Finalizado' && isAdmin && !janta.responsibles.includes(user.id) && janta.payment_value && (
-                    <button onClick={() => setPaymentEvent(janta)}
-                      className="flex items-center gap-1 text-[10px] font-bold px-2.5 py-1.5 rounded-lg border border-emerald-200 text-emerald-600 bg-emerald-50 dark:bg-emerald-900/10 dark:border-emerald-800/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/20 transition-colors">
-                      <Receipt size={12} /> Ver Cobrança
-                    </button>
-                  )}
 
                   {/* Admin: Gerenciar Presaças */}
                   {isAdmin && janta.status === 'Aberto' && (
@@ -441,6 +427,21 @@ export default function JantasPage() {
                 </div>
               </div>
             </div>
+
+            {/* Cobrança button (for Finalizado) */}
+            {janta.status === 'Finalizado' && (janta.responsibles.includes(user.id) || (isAdmin && janta.payment_value)) && (
+              <div 
+                className="flex flex-col sm:flex-row flex-wrap gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  onClick={() => setPaymentEvent(janta)}
+                  className="flex-1 p-3 border-2 border-emerald-200 text-emerald-600 bg-emerald-50 dark:bg-emerald-900/10 dark:border-emerald-800/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/20 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2"
+                >
+                  <span className="text-xl">💰</span> {janta.payment_value ? 'Ver Cobrança' : 'Gerar Cobrança'}
+                </button>
+              </div>
+            )}
 
             {/* Attendance buttons (only for Aberto and not Cancelado) */}
             {janta.status === 'Aberto' && (

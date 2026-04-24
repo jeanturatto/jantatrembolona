@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
-export const Modal = ({ isOpen, onClose, title, children }) => {
+export const Modal = ({ isOpen, onClose, title, children, maxWidthClass = 'sm:max-w-md' }) => {
   useEffect(() => {
     if (!isOpen) return;
     const handler = (e) => { if (e.key === 'Escape') onClose?.(); };
@@ -23,17 +23,17 @@ export const Modal = ({ isOpen, onClose, title, children }) => {
       onClick={onClose}
     >
       <div
-        className="
+        className={`
           bg-white dark:bg-[#0e0e20]
           border border-[#2842B5]/10 dark:border-white/[0.08]
-          w-full sm:max-w-md
+          w-full ${maxWidthClass}
           rounded-t-3xl sm:rounded-2xl
           shadow-2xl
           overflow-hidden
           animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200
           flex flex-col
           max-h-[92dvh] sm:max-h-[90vh]
-        "
+        `}
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
         onClick={e => e.stopPropagation()}
       >
