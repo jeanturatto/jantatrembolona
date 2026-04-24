@@ -25,6 +25,7 @@ export const EventDetailModal = ({
   pastDeadline,
   onEditClick,
   onPaymentClick,
+  onConfirmacaoClick,
   onEventUpdate,
 }) => {
   const { user, isAdmin } = useAuth();
@@ -302,6 +303,14 @@ export const EventDetailModal = ({
                className="flex-1 p-3 border-2 border-emerald-200 text-emerald-600 bg-emerald-50 dark:bg-emerald-900/10 dark:border-emerald-800/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/20 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2"
             >
               <span className="text-xl">💰</span> Gerar Cobrança
+            </button>
+          )}
+          {pastDeadline && (isUserResponsible || isAdmin) && onConfirmacaoClick && (
+            <button
+               onClick={() => { onConfirmacaoClick(event); onClose(); }}
+               className="flex-1 p-3 border-2 border-green-200 text-green-600 bg-green-50 dark:bg-green-900/10 dark:border-green-800/40 hover:bg-green-100 dark:hover:bg-green-900/20 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2"
+            >
+              <MessageSquare size={16} /> WhatsApp
             </button>
           )}
           <button

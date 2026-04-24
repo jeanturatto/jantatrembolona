@@ -435,25 +435,27 @@ export default function JantasPage() {
               </div>
             </div>
 
-            {/* Ações após prazo / Finalizado (Admin e Responsáveis) */}
-            {(janta.status === 'Finalizado' || isEventPastDeadline(janta.rawDate)) && (isAdmin || janta.responsibles.includes(user.id)) && janta.status !== 'Cancelado' && (
+            {/* Ações para Jantas Finalizadas */}
+            {janta.status === 'Finalizado' && (
               <div 
-                className="flex flex-col sm:flex-row flex-wrap gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800"
+                className="flex flex-col sm:flex-row flex-wrap gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800 items-center"
                 onClick={(e) => e.stopPropagation()}
               >
-                <button
-                  onClick={() => setConfirmacaoEvent(janta)}
-                  className="flex-1 p-3 border-2 border-green-200 text-green-600 bg-green-50 dark:bg-green-900/10 dark:border-green-800/40 hover:bg-green-100 dark:hover:bg-green-900/20 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2"
-                >
-                  <MessageSquare size={16} /> Msg WhatsApp
-                </button>
-                
-                {janta.status === 'Finalizado' && (janta.responsibles.includes(user.id) || (isAdmin && janta.payment_value)) && (
+                {(janta.responsibles.includes(user.id) || (isAdmin && janta.payment_value)) && (
                   <button
                     onClick={() => setPaymentEvent(janta)}
-                    className="flex-1 p-3 border-2 border-emerald-200 text-emerald-600 bg-emerald-50 dark:bg-emerald-900/10 dark:border-emerald-800/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/20 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2"
+                    className="flex-1 sm:flex-none text-xs font-bold py-2 px-4 rounded-xl border border-emerald-500 text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 min-w-[140px] flex items-center justify-center gap-2 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-colors"
                   >
-                    <span className="text-xl">💰</span> {janta.payment_value ? 'Ver Cobrança' : 'Gerar Cobrança'}
+                    <span className="text-sm">💰</span> {janta.payment_value ? 'Ver Cobrança' : 'Gerar Cobrança'}
+                  </button>
+                )}
+
+                {(isAdmin || janta.responsibles.includes(user.id)) && (
+                  <button
+                    onClick={() => setConfirmacaoEvent(janta)}
+                    className="flex-1 sm:flex-none sm:ml-auto text-xs font-bold py-2 px-4 rounded-xl border border-green-500 text-green-600 bg-green-50 dark:bg-green-500/10 min-w-[140px] flex items-center justify-center gap-2 hover:bg-green-100 dark:hover:bg-green-500/20 transition-colors"
+                  >
+                    <MessageSquare size={14} /> Msg WhatsApp
                   </button>
                 )}
               </div>
@@ -462,44 +464,54 @@ export default function JantasPage() {
             {/* Attendance buttons (only for Aberto and not Cancelado) */}
             {janta.status === 'Aberto' && (
               <div 
-                className="flex flex-col sm:flex-row flex-wrap gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800"
+                className="flex flex-col sm:flex-row flex-wrap gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800 items-center"
                 onClick={(e) => e.stopPropagation()}
               >
                 {janta.responsibles.includes(user.id) ? (
-                  <button disabled className="flex-1 sm:flex-none text-xs font-bold py-2 px-4 rounded-xl border border-green-500 text-green-600 bg-green-50 dark:bg-green-500/10 min-w-[140px] flex items-center gap-2 cursor-not-allowed">
+                  <button disabled className="flex-1 sm:flex-none text-xs font-bold py-2 px-4 rounded-xl border border-green-500 text-green-600 bg-green-50 dark:bg-green-500/10 min-w-[140px] flex items-center justify-center gap-2 cursor-not-allowed">
                     <Lock size={12} /> Responsável (Confirmado)
                   </button>
                 ) : janta.userStatus === 'Presente' ? (
-                  <button disabled className="flex-1 sm:flex-none text-xs font-bold py-2 px-4 rounded-xl border border-green-500 text-green-600 bg-green-50 dark:bg-green-500/10 min-w-[140px] flex items-center gap-2 cursor-not-allowed opacity-80">
+                  <button disabled className="flex-1 sm:flex-none text-xs font-bold py-2 px-4 rounded-xl border border-green-500 text-green-600 bg-green-50 dark:bg-green-500/10 min-w-[140px] flex items-center justify-center gap-2 cursor-not-allowed opacity-80">
                     <Lock size={12} /> Presença Confirmada
                   </button>
                 ) : janta.userStatus === 'Falta Justificada' ? (
-                  <button disabled className="flex-1 sm:flex-none text-xs font-bold py-2 px-4 rounded-xl border border-amber-500 text-amber-600 bg-amber-50 dark:bg-amber-500/10 min-w-[140px] flex items-center gap-2 cursor-not-allowed opacity-80">
+                  <button disabled className="flex-1 sm:flex-none text-xs font-bold py-2 px-4 rounded-xl border border-amber-500 text-amber-600 bg-amber-50 dark:bg-amber-500/10 min-w-[140px] flex items-center justify-center gap-2 cursor-not-allowed opacity-80">
                     <Lock size={12} /> Falta Justificada
                   </button>
                 ) : janta.userStatus === 'Ausente' ? (
-                  <button disabled className="flex-1 sm:flex-none text-xs font-bold py-2 px-4 rounded-xl border border-zinc-400 text-zinc-500 bg-zinc-100 dark:bg-zinc-800 min-w-[140px] flex items-center gap-2 cursor-not-allowed opacity-80">
+                  <button disabled className="flex-1 sm:flex-none text-xs font-bold py-2 px-4 rounded-xl border border-zinc-400 text-zinc-500 bg-zinc-100 dark:bg-zinc-800 min-w-[140px] flex items-center justify-center gap-2 cursor-not-allowed opacity-80">
                     <Lock size={12} /> Não Vai
                   </button>
                 ) : isEventPastDeadline(janta.rawDate) ? (
-                  <button disabled className="flex-1 sm:flex-none text-xs font-bold py-2 px-4 rounded-xl border border-red-300 text-red-400 bg-red-50 dark:bg-red-900/10 min-w-[140px] flex items-center gap-2 cursor-not-allowed opacity-80">
+                  <button disabled className="flex-1 sm:flex-none text-xs font-bold py-2 px-4 rounded-xl border border-red-300 text-red-400 bg-red-50 dark:bg-red-900/10 min-w-[140px] flex items-center justify-center gap-2 cursor-not-allowed opacity-80">
                     Prazo Encerrado
                   </button>
                 ) : (
                   <>
                     <button onClick={() => handleAttendance(janta.id, 'Presente')} disabled={actionLoading === janta.id}
-                      className="flex-1 sm:flex-none border-2 border-green-500 bg-green-50 dark:bg-green-500/10 text-green-600 font-bold text-xs py-2 px-4 rounded-xl hover:bg-green-100 dark:hover:bg-green-500/20 transition-colors min-w-[130px]">
+                      className="flex-1 sm:flex-none border-2 border-green-500 bg-green-50 dark:bg-green-500/10 text-green-600 font-bold text-xs py-2 px-4 rounded-xl hover:bg-green-100 dark:hover:bg-green-500/20 transition-colors min-w-[130px] flex justify-center items-center">
                       {actionLoading === janta.id ? '...' : '✅ Confirmar Presença'}
                     </button>
                     <button onClick={() => handleNaoVou(janta.id)} disabled={actionLoading === janta.id}
-                      className="flex-1 sm:flex-none border-2 border-red-400 bg-red-50 dark:bg-red-500/10 text-red-600 font-bold text-xs py-2 px-4 rounded-xl hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors min-w-[120px]">
+                      className="flex-1 sm:flex-none border-2 border-red-400 bg-red-50 dark:bg-red-500/10 text-red-600 font-bold text-xs py-2 px-4 rounded-xl hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors min-w-[120px] flex justify-center items-center">
                       {actionLoading === janta.id ? '...' : `❌ Não Vou (${Math.max(0, LIMITE_AUSENCIAS - ausenciasNoMes)}x)`}
                     </button>
                     <button onClick={() => handleJustificado(janta.id)} disabled={actionLoading === janta.id}
-                      className="flex-1 sm:flex-none bg-amber-50 border border-amber-400 text-amber-600 hover:bg-amber-100 transition-colors text-xs font-bold py-2 px-4 rounded-xl min-w-[140px]">
+                      className="flex-1 sm:flex-none bg-amber-50 border border-amber-400 text-amber-600 hover:bg-amber-100 transition-colors text-xs font-bold py-2 px-4 rounded-xl min-w-[140px] flex justify-center items-center">
                       {actionLoading === janta.id ? '...' : '🟡 Não Vou (Justificado)'}
                     </button>
                   </>
+                )}
+
+                {/* Msg WhatsApp if past deadline and is Admin or Responsible */}
+                {isEventPastDeadline(janta.rawDate) && (isAdmin || janta.responsibles.includes(user.id)) && (
+                  <button
+                    onClick={() => setConfirmacaoEvent(janta)}
+                    className="flex-1 sm:flex-none sm:ml-auto text-xs font-bold py-2 px-4 rounded-xl border border-green-500 text-green-600 bg-green-50 dark:bg-green-500/10 min-w-[140px] flex items-center justify-center gap-2 hover:bg-green-100 dark:hover:bg-green-500/20 transition-colors"
+                  >
+                    <MessageSquare size={14} /> Msg WhatsApp
+                  </button>
                 )}
               </div>
             )}
@@ -520,6 +532,7 @@ export default function JantasPage() {
         pastDeadline={detailEvent ? isEventPastDeadline(detailEvent.rawDate) : false}
         onEditClick={setEditEvent}
         onPaymentClick={setPaymentEvent}
+        onConfirmacaoClick={setConfirmacaoEvent}
         onEventUpdate={fetchJantas}
       />
       <AdminAttendanceModal isOpen={!!attendanceEvent} onClose={() => setAttendanceEvent(null)} event={attendanceEvent} onSuccess={fetchJantas} />

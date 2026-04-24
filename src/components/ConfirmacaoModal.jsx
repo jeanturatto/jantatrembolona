@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Copy, CheckCircle, MessageSquare, Users, Calendar, MapPin, X, Utensils } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
@@ -110,8 +111,8 @@ export const ConfirmacaoModal = ({ isOpen, onClose, event }) => {
 
   const message = buildMessage();
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+  return createPortal(
+    <div className="fixed inset-0 z-[999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 dark:bg-black/80 backdrop-blur-md animate-in fade-in">
       <div className="bg-white dark:bg-zinc-900 w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl shadow-2xl flex flex-col max-h-[90dvh]">
 
         {/* Header */}
@@ -195,6 +196,7 @@ export const ConfirmacaoModal = ({ isOpen, onClose, event }) => {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

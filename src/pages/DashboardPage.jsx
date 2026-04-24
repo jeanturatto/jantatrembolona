@@ -9,6 +9,7 @@ import { EventDetailModal } from '../components/EventDetailModal';
 import { EditEventModal } from '../components/EditEventModal';
 import { RatingModal } from '../components/RatingModal';
 import { PaymentModal } from '../components/PaymentModal';
+import { ConfirmacaoModal } from '../components/ConfirmacaoModal';
 
 // Regra: o prazo de confirmação encerra no DIA ANTERIOR à janta às 16:00 BRT.
 const isEventPastDeadline = (eventDateStr) => {
@@ -54,6 +55,7 @@ export default function DashboardPage() {
   // Payment modal (responsaveis)
   const [pendingPaymentEvent, setPendingPaymentEvent] = useState(null);
   const [paymentModalEvent, setPaymentModalEvent] = useState(null);
+  const [confirmacaoEvent, setConfirmacaoEvent] = useState(null);
   // Ranking
   const [activeTab, setActiveTab] = useState('Abertas');
   const [ranking, setRanking] = useState([]);
@@ -696,6 +698,7 @@ export default function DashboardPage() {
         pastDeadline={detailEvent ? isEventPastDeadline(detailEvent.rawDate) : false}
         onEditClick={setEditEvent}
         onPaymentClick={setPaymentModalEvent}
+        onConfirmacaoClick={setConfirmacaoEvent}
         onEventUpdate={fetchDashboardData}
       />
 
@@ -732,6 +735,11 @@ export default function DashboardPage() {
         onClose={() => setPaymentModalEvent(null)}
         event={paymentModalEvent}
         onSuccess={fetchDashboardData}
+      />
+      <ConfirmacaoModal
+        isOpen={!!confirmacaoEvent}
+        onClose={() => setConfirmacaoEvent(null)}
+        event={confirmacaoEvent}
       />
     </div>
   );
