@@ -203,7 +203,8 @@ export default function DashboardPage() {
               initial: (profileMap[id]?.name || 'U').charAt(0).toUpperCase(),
             })),
             responsiveisNomes: (j.responsibles || []).map(id => profileMap[id]?.name).filter(Boolean).join(', ') || 'Nenhum responsável',
-            userStatus: userAtt ? userAtt.status : null
+            userStatus: userAtt ? userAtt.status : null,
+            guests: Array.isArray(j.guests) ? j.guests : [],
           };
         });
         setJantas(formattedJantas);
@@ -534,6 +535,11 @@ export default function DashboardPage() {
                        </span>
                     )}
                   </div>
+                   {janta.guests?.length > 0 && (
+                     <span className="text-[10px] text-violet-500 font-bold mt-0.5 block">
+                       +{janta.guests.length} convidado{janta.guests.length > 1 ? 's' : ''}
+                     </span>
+                   )}
                 </div>
 
                 {janta.status === 'Aberto' ? (
@@ -730,6 +736,7 @@ export default function DashboardPage() {
         pastDeadline={detailEvent ? isEventPastDeadline(detailEvent.rawDate) : false}
         onEditClick={setEditEvent}
         onPaymentClick={setPaymentModalEvent}
+        onEventUpdate={fetchDashboardData}
       />
 
       <EditEventModal
