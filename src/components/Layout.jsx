@@ -48,7 +48,7 @@ export default function Layout() {
 
   const navItems = [
     { to: '/', label: 'Início',     icon: LayoutDashboard, end: true },
-    { to: '/jantas', label: 'Jantas', icon: Calendar },
+    ...(isAdmin ? [{ to: '/jantas', label: 'Jantas', icon: Calendar }] : []),
     { to: '/avaliacoes', label: 'Avaliações', icon: Star },
     ...(isAdmin ? [{ to: '/relatorios', label: 'Relatórios', icon: BarChart3 }] : []),
   ];

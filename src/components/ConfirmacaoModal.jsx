@@ -107,6 +107,12 @@ export const ConfirmacaoModal = ({ isOpen, onClose, event }) => {
     setTimeout(() => setCopied(false), 2500);
   };
 
+  const handleShareWhatsApp = () => {
+    const msg = buildMessage();
+    const url = `https://wa.me/?text=${encodeURIComponent(msg)}`;
+    window.open(url, '_blank');
+  };
+
   if (!isOpen || !event) return null;
 
   const message = buildMessage();
@@ -178,21 +184,29 @@ export const ConfirmacaoModal = ({ isOpen, onClose, event }) => {
         </div>
 
         {/* Footer */}
-        <div className="px-5 pb-5 pt-3 border-t border-zinc-100 dark:border-zinc-800 shrink-0">
+        <div className="px-5 pb-5 pt-3 border-t border-zinc-100 dark:border-zinc-800 shrink-0 flex flex-col sm:flex-row gap-2">
           <button
             onClick={handleCopy}
             disabled={loading}
-            className={`w-full py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${
+            className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${
               copied
-                ? 'bg-green-600 text-white'
-                : 'bg-green-500 hover:bg-green-600 text-white'
+                ? 'bg-zinc-800 text-white'
+                : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-900 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-white'
             } disabled:opacity-50`}
           >
             {copied ? (
               <><CheckCircle size={16} /> Copiado!</>
             ) : (
-              <><Copy size={16} /> Copiar Mensagem</>
+              <><Copy size={16} /> Copiar</>
             )}
+          </button>
+          
+          <button
+            onClick={handleShareWhatsApp}
+            disabled={loading}
+            className="flex-1 py-3 rounded-xl font-bold text-sm bg-green-500 hover:bg-green-600 text-white transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            <MessageSquare size={16} /> Enviar WhatsApp
           </button>
         </div>
       </div>
