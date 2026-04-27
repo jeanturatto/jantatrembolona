@@ -60,7 +60,7 @@ export default function JantasPage() {
   const fetchJantas = useCallback(async () => {
     if (!user?.id) return;
     try {
-      const [{ data, error }, { data: myRatings }, { data: profiles }] = await Promise.all([
+      const [{ data, error }, { data: myRatings }, { data: profiles }, { data: userProfile }] = await Promise.all([
         supabase
           .from('events')
           .select('*, attendances(user_id, status)')
@@ -71,7 +71,12 @@ export default function JantasPage() {
           .eq('user_id', user.id),
         supabase
           .from('profiles')
-          .select('id, name, avatar_url')
+          .select('id, name, avatar_url'),
+        supabase
+          .from('profiles')
+          .select('created_at')
+          .eq('id', user.id)
+          .single(),
       ]);
 
       if (error) {
@@ -79,6 +84,8 @@ export default function JantasPage() {
         setLoading(false);
         return;
       }
+
+      const userCreatedAt = userProfile?.created_at;
 
       if (data) {
         const today = new Date();
@@ -99,6 +106,8 @@ export default function JantasPage() {
 
         setMyRatingsIds(new Set((myRatings || []).map(r => r.event_id)));
 
+        const userCreatedAt = userProfile?.created_at;
+
         const profileMap = Object.fromEntries(
           (profiles || []).map(p => [p.id, {
             name: p.name || p.email?.split('@')[0] || 'U',
@@ -110,6 +119,7 @@ export default function JantasPage() {
           const presentes = j.attendances?.filter(a => a.status === 'Presente') || [];
           const userAtt = j.attendances?.find(a => a.user_id === user.id);
           const eventDate = new Date(j.date);
+          const isAfterUserJoined = !userCreatedAt || new Date(j.date) >= new Date(userCreatedAt);
           return {
             id: j.id,
             rawName: j.name,
@@ -132,6 +142,7 @@ export default function JantasPage() {
             })),
             userStatus: userAtt ? userAtt.status : null,
             created_by: j.created_by,
+            canRate: isAfterUserJoined,
             payment_value: j.payment_value || null,
             payment_sent: j.payment_sent || false,
             guests: Array.isArray(j.guests) ? j.guests : [],
@@ -400,8 +411,8 @@ export default function JantasPage() {
                   className="flex items-center gap-2 flex-wrap justify-end"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  {/* Avaliar (se concluida, não avaliada) */}
-                  {janta.status === 'Finalizado' && !myRatingsIds.has(janta.id) && (
+                  {/* Avaliar (se concluida, não avaliada, e janta posterior ao cadastro do usuário) */}
+                  {janta.status === 'Finalizado' && !myRatingsIds.has(janta.id) && janta.canRate && (
                     <button onClick={() => setRatingEvent(janta)}
                       className="flex items-center gap-1 text-[10px] font-bold px-2.5 py-1.5 rounded-lg border border-amber-200 text-amber-600 bg-amber-50 dark:bg-amber-900/10 dark:border-amber-800/40 hover:bg-amber-100 dark:hover:bg-amber-900/20 transition-colors">
                       <Star size={12} className="fill-amber-500" /> Avaliar

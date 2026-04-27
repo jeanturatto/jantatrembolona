@@ -92,6 +92,7 @@ export default function DashboardPage() {
         supabase.from('profiles').select('id, name, avatar_url, data_nascimento').not('data_nascimento', 'is', null),
         supabase.from('events').select('*, attendances(user_id, status)').eq('status', 'Finalizado').lte('date', today),
         supabase.from('ratings').select('event_id').eq('user_id', user.id),
+        supabase.from('profiles').select('created_at').eq('id', user.id).single(),
       ]);
 
       const results = await withTimeout(fetchPromises, 12000); // 12 seconds max timeout
@@ -105,9 +106,12 @@ export default function DashboardPage() {
         { data: allProfilesWithBirthday },
         { data: finishedEvents },
         { data: myRatings },
+        { data: userProfile },
       ] = results;
 
       if (jantasErr) throw jantasErr;
+
+      const userCreatedAt = userProfile?.created_at;
 
       // ── Aniversariantes do mês
       const birthday = (allProfilesWithBirthday || []).filter(p => {
@@ -134,8 +138,10 @@ export default function DashboardPage() {
       // ── Evento pendente de avaliação
       // Mostra para todos os usuarios que participaram (Presente ou Ausente) em jantas finalizadas
       // O popup só some quando avaliar
+      // IMPORTANTE: só mostra jantas posteriores à data de criação do usuário
       const myAttendedInFinished = (jantasData || [])
         .filter(j => j.status === 'Finalizado')
+        .filter(j => !userCreatedAt || new Date(j.date) >= new Date(userCreatedAt))
         .map(j => {
           const userAtt = j.attendances?.find(a => a.user_id === user.id);
           return { event: j, userStatus: userAtt?.status };
@@ -147,14 +153,18 @@ export default function DashboardPage() {
         .sort((a, b) => new Date(b.event.date) - new Date(a.event.date))[0];
       
       if (pendingRating) {
-        const ratingPayload = {
+        setRatingEvent({
           id: pendingRating.event.id,
           name: pendingRating.event.name || 'Janta',
           dateFormatted: new Date(pendingRating.event.date).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }),
           rawDate: pendingRating.event.date,
-        };
-        setPendingRatingEvent(ratingPayload);
-        setRatingEvent(ratingPayload);
+        });
+        setPendingRatingEvent({
+          id: pendingRating.event.id,
+          name: pendingRating.event.name || 'Janta',
+          dateFormatted: new Date(pendingRating.event.date).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }),
+          rawDate: pendingRating.event.date,
+        });
       } else {
         setPendingRatingEvent(null);
       }
@@ -175,6 +185,7 @@ export default function DashboardPage() {
           const userStatus = userAtt ? userAtt.status : null;
           const responsiveisNomes = (j.responsibles || []).map(id => profileMap[id]).filter(Boolean).join(', ');
           const eventDate = new Date(j.date);
+          const isAfterUserJoined = !userCreatedAt || new Date(j.date) >= new Date(userCreatedAt);
           return {
             id: j.id,
             name: j.name || 'Janta das Quintas',
@@ -194,6 +205,7 @@ export default function DashboardPage() {
             responsibles: j.responsibles || [],
             payment_sent: j.payment_sent || false,
             payment_value: j.payment_value || null,
+            canRate: isAfterUserJoined,
             attendees: presentes.length,
             // Lista com nome, avatar e inicial dos primeiros 3 presentes
             attendeesList: presentes.slice(0, 3).map(a => ({
@@ -657,7 +669,7 @@ export default function DashboardPage() {
                   )
                 ) : (
                   <div className="flex gap-2">
-                    {janta.status === 'Finalizado' && !myRatingsIds.has(janta.id) && (
+                    {janta.status === 'Finalizado' && !myRatingsIds.has(janta.id) && janta.canRate && (
                       <button 
                         onClick={() => setRatingEvent(janta)}
                         className="bg-amber-100 hover:bg-amber-200 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-[10px] font-bold px-3 py-1.5 rounded-lg transition-colors cursor-pointer flex items-center gap-1"
