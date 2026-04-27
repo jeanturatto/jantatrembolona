@@ -51,6 +51,20 @@ export const CreateEventModal = ({ isOpen, onClose, onSuccess }) => {
       alert('Selecione pelo menos 1 responsável (cozinheiro) para a janta.');
       return;
     }
+
+    // Verificar se já existe janta no mesmo dia
+    const dateOnly = date.split('T')[0];
+    const { data: existingEvents } = await supabase
+      .from('events')
+      .select('id, name, date')
+      .gte('date', `${dateOnly}T00:00:00`)
+      .lt('date', `${dateOnly}T23:59:59`);
+
+    if (existingEvents && existingEvents.length > 0) {
+      alert(`Já existe uma janta marcada para este dia: "${existingEvents[0].name}". Escolha outra data.`);
+      return;
+    }
+
     setIsLoading(true);
     
     try {

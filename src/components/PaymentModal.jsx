@@ -167,36 +167,28 @@ export const PaymentModal = ({ isOpen, onClose, event, onSuccess }) => {
     await handleCopy();
   };
 
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
   const handleShareWhatsApp = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: `Cobrança - ${event?.name || 'Janta'}`,
-          text: generatedMessage,
-        });
-        return;
-      } catch (err) {
-        if (err.name !== 'AbortError') {
-          console.log('Web Share falhou, tentando método alternativo');
+    if (isMobile) {
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: `Cobrança - ${event?.name || 'Janta'}`,
+            text: generatedMessage,
+          });
+          return;
+        } catch (err) {
+          if (err.name !== 'AbortError') {
+            console.log('Web Share falhou, tentando método alternativo');
+          }
         }
       }
     }
     
-    // Fallback: copia para área de transferência
-    try {
-      await navigator.clipboard.writeText(generatedMessage);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
-    } catch {
-      const el = document.createElement('textarea');
-      el.value = generatedMessage;
-      document.body.appendChild(el);
-      el.select();
-      document.execCommand('copy');
-      document.body.removeChild(el);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
-    }
+    // No desktop, abre WhatsApp Web com mensagem
+    const url = `https://wa.me/?text=${encodeURIComponent(generatedMessage)}`;
+    window.open(url, '_blank');
   };
 
   const handleClose = () => {

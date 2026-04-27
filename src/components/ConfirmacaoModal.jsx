@@ -107,39 +107,31 @@ export const ConfirmacaoModal = ({ isOpen, onClose, event }) => {
     setTimeout(() => setCopied(false), 2500);
   };
 
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
   const handleShareWhatsApp = async () => {
     const msg = buildMessage();
     
-    // Tenta usar Web Share API primeiro (funciona melhor no mobile)
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: `Confirmação - ${event?.name || 'Janta'}`,
-          text: msg,
-        });
-        return;
-      } catch (err) {
-        if (err.name !== 'AbortError') {
-          console.log('Web Share falhou, tentando método alternativo');
+    // No mobile, usa Web Share API
+    if (isMobile) {
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: `Confirmação - ${event?.name || 'Janta'}`,
+            text: msg,
+          });
+          return;
+        } catch (err) {
+          if (err.name !== 'AbortError') {
+            console.log('Web Share falhou, tentando método alternativo');
+          }
         }
       }
     }
     
-    // Fallback: copia para área de transferência
-    try {
-      await navigator.clipboard.writeText(msg);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
-    } catch {
-      const el = document.createElement('textarea');
-      el.value = msg;
-      document.body.appendChild(el);
-      el.select();
-      document.execCommand('copy');
-      document.body.removeChild(el);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
-    }
+    // No desktop ou se Web Share falhar, abre WhatsApp Web com mensagem
+    const url = `https://wa.me/?text=${encodeURIComponent(msg)}`;
+    window.open(url, '_blank');
   };
 
   if (!isOpen || !event) return null;
