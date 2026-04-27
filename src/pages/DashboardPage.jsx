@@ -157,8 +157,9 @@ export default function DashboardPage() {
             payment_sent: j.payment_sent || false,
             payment_value: j.payment_value || null,
             canRate: isAfterUserJoined && (userAtt?.status === 'Presente' || userAtt?.status === 'Confirmado'),
+          };
         })
-        .filter(({ userStatus }) => userStatus === 'Presente' || userStatus === 'Ausente')
+        .filter(({ userStatus }) => (userStatus === 'Presente' || userStatus === 'Confirmado'))
         .filter(({ event }) => !ratedEventIds.has(event.id));
       
       const pendingRating = myAttendedInFinished
