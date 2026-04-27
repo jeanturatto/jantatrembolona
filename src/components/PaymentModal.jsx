@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Copy, CheckCircle, Receipt, Users, Calculator, RefreshCw, Utensils } from 'lucide-react';
+import { Copy, CheckCircle, Receipt, Users, Calculator, RefreshCw, Utensils, Share } from 'lucide-react';
 import { Modal } from './Modal';
 import { supabase } from '../lib/supabase';
 
@@ -148,6 +148,25 @@ export const PaymentModal = ({ isOpen, onClose, event, onSuccess }) => {
     }
   };
 
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Cobrança - ${event?.name || 'Janta'}`,
+          text: generatedMessage,
+        });
+        return;
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          console.log('Web Share falhou, tentando método alternativo');
+        }
+      }
+    }
+    
+    // Fallback: copia para área de transferência
+    await handleCopy();
+  };
+
   const handleClose = () => {
     setGeneratedMessage('');
     setCopied(false);
@@ -280,14 +299,14 @@ export const PaymentModal = ({ isOpen, onClose, event, onSuccess }) => {
             </button>
             {generatedMessage ? (
               <button
-                onClick={handleCopy}
+                onClick={handleShare}
                 className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${
                   copied
                     ? 'bg-green-600 hover:bg-green-700 text-white'
                     : 'bg-[#2842B5] hover:bg-[#3452c5] text-white'
                 }`}
               >
-                {copied ? <><CheckCircle size={15} /> Copiado!</> : <><Copy size={15} /> Copiar Mensagem</>}
+                {copied ? <><CheckCircle size={15} /> Copiado!</> : <><Share size={15} /> Compartilhar</>}
               </button>
             ) : (
               <button
