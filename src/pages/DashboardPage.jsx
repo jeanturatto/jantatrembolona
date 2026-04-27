@@ -126,15 +126,18 @@ export default function DashboardPage() {
       setRanking(ranked);
 
       // ── Evento pendente de avaliação
-      const myAttendedIds = new Set((attendances || []).filter(a => a.status === 'Presente').map(a => a.event_id));
+      // Mostra para todos os usuarios que participaram (Presente ou Ausente) em jantas finalizadas
+      // O popup só some quando avaliar
+      const myAttendedEvents = new Set((attendances || []).filter(a => a.status === 'Presente' || a.status === 'Ausente').map(a => a.event_id));
       const pendingRating = (finishedEvents || [])
-        .filter(e => myAttendedIds.has(e.id) && !ratedEventIds.has(e.id))
+        .filter(e => myAttendedEvents.has(e.id) && !ratedEventIds.has(e.id))
         .sort((a, b) => new Date(b.date) - new Date(a.date))[0];
       if (pendingRating) {
         const ratingPayload = {
           id: pendingRating.id,
           name: pendingRating.name || 'Janta',
           dateFormatted: new Date(pendingRating.date).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }),
+          rawDate: pendingRating.date,
         };
         setPendingRatingEvent(ratingPayload);
         // Force the rating modal if there's a pending rating

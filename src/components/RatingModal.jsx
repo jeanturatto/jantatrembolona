@@ -24,6 +24,7 @@ export const RatingModal = ({ isOpen, onClose, event, onSubmit, loading, unclosa
   };
 
   const active = hovered || stars;
+  const eventDate = event.rawDate ? new Date(event.rawDate).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }) : (event.dateFormatted || event.date);
 
   return (
     <Modal isOpen={isOpen} onClose={unclosable ? undefined : handleClose} title="Avaliar Janta">
