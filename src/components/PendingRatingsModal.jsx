@@ -75,11 +75,13 @@ export const PendingRatingsModal = ({ isOpen, onClose, onAllRated, user }) => {
     if (stars === 0 || submitting || !currentEvent) return;
     setSubmitting(true);
     try {
-      const { error } = await supabase.from('ratings').upsert(
-        { event_id: currentEvent.id, user_id: user.id, stars, comment: comment.trim() },
-        { onConflict: 'event_id,user_id' }
+      const { error } = await supabase.from('ratings').insert(
+        { event_id: currentEvent.id, user_id: user.id, stars, comment: comment.trim() }
       );
-      if (error) throw error;
+      if (error) {
+        alert('Erro ao enviar avaliação: ' + error.message);
+        throw error;
+      }
 
       const isLast = currentIndex >= pendingEvents.length - 1;
       if (isLast) {
@@ -121,7 +123,7 @@ export const PendingRatingsModal = ({ isOpen, onClose, onAllRated, user }) => {
           <div className="text-center py-8 text-zinc-400 text-sm">Carregando...</div>
         ) : currentEvent ? (
           <>
-            <div className="px-4 py-3 bg-[#2842B5]/[0.06] dark:bg-[#2842B5]/10 border border-[#2842B5]/15 rounded-xl">
+            <div className="px-4 py-3 bg-[#28B5]/[0.06] dark:bg-[#28B5]/10 border border-[#28B5]/15 rounded-xl">
               <p className="text-sm font-semibold text-zinc-900 dark:text-white capitalize">
                 {currentEvent.name || 'Janta das Quintas'}
               </p>
@@ -134,7 +136,7 @@ export const PendingRatingsModal = ({ isOpen, onClose, onAllRated, user }) => {
                     key={i}
                     className={`w-1.5 h-1.5 rounded-full transition-colors ${
                       i === currentIndex
-                        ? 'bg-[#2842B5]'
+                        ? 'bg-[#28B5]'
                         : i < currentIndex
                           ? 'bg-green-400'
                           : 'bg-zinc-300 dark:bg-zinc-600'
@@ -186,7 +188,7 @@ export const PendingRatingsModal = ({ isOpen, onClose, onAllRated, user }) => {
                 placeholder='"A melhor carne do ano!"'
                 maxLength={150}
                 rows={3}
-                className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all resize-none bg-zinc-50 dark:bg-white/[0.05] text-zinc-900 dark:text-white border border-zinc-200 dark:border-white/[0.09] placeholder:text-zinc-300 dark:placeholder:text-white/20 focus:border-[#2842B5]/60 focus:ring-2 focus:ring-[#2842B5]/20"
+                className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all resize-none bg-zinc-50 dark:bg-white/[0.05] text-zinc-900 dark:text-white border border-zinc-200 dark:border-white/[0.09] placeholder:text-zinc-300 dark:placeholder:text-white/20 focus:border-[#28B5]/60 focus:ring-2 focus:ring-[#28B5]/20"
               />
               <p className="text-[10px] text-zinc-300 dark:text-[#3a3a50] mt-1 text-right">{comment.length}/150</p>
             </div>
@@ -194,7 +196,7 @@ export const PendingRatingsModal = ({ isOpen, onClose, onAllRated, user }) => {
             <button
               onClick={handleSubmit}
               disabled={stars === 0 || submitting}
-              className="w-full py-3 bg-[#2842B5] hover:bg-[#3452c5] disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2"
+              className="w-full py-3 bg-[#28B5] hover:bg-[#3452c5] disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2"
             >
               {submitting ? (
                 <>

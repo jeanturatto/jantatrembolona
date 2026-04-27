@@ -427,10 +427,10 @@ export default function JantasPage() {
 
                   {/* Admin: Ver/editar cobrança gerada por responsável */}
 
-                  {/* Admin: Gerenciar Presaças */}
-                  {isAdmin && janta.status === 'Aberto' && (
+{/* Admin: Gerenciar Presenças (Aberto ou Finalizado) */}
+                  {isAdmin && (janta.status === 'Aberto' || janta.status === 'Finalizado') && (
                     <button onClick={() => setAttendanceEvent(janta)}
-                      className="flex items-center gap-1 text-[10px] font-bold px-2.5 py-1.5 rounded-lg border border-blue-200 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors">
+                      className="flex items-center gap-1 text-[10px] font-bold px-2.5 py-1.5 rounded- lg border border-blue-200 text-blue-500 hover: bg- blue-50 dark: hover: bg- blue-900/10 transition- colors">
                       <UserCog size={12} /> Presenças
                     </button>
                   )}
