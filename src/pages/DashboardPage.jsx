@@ -84,7 +84,7 @@ export default function DashboardPage() {
         supabase.from('attendances').select('*').eq('user_id', user.id),
         supabase.from('profiles').select('id, name, email, avatar_url'),
         supabase.from('profiles').select('id, name, avatar_url, data_nascimento').not('data_nascimento', 'is', null),
-        supabase.from('events').select('id, name, date, location, responsibles, ratings(stars, comment), payment_value').eq('status', 'Finalizado').gte('date', `${currentYear}-01-01`).lte('date', today),
+        supabase.from('events').select('*, attendances(user_id, status)').eq('status', 'Finalizado').gte('date', `${currentYear}-01-01`).lte('date', today),
         supabase.from('ratings').select('event_id').eq('user_id', user.id),
       ]);
 
@@ -128,19 +128,26 @@ export default function DashboardPage() {
       // ── Evento pendente de avaliação
       // Mostra para todos os usuarios que participaram (Presente ou Ausente) em jantas finalizadas
       // O popup só some quando avaliar
-      const myAttendedEvents = new Set((attendances || []).filter(a => a.status === 'Presente' || a.status === 'Ausente').map(a => a.event_id));
-      const pendingRating = (finishedEvents || [])
-        .filter(e => myAttendedEvents.has(e.id) && !ratedEventIds.has(e.id))
-        .sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+      const myAttendedInFinished = (jantasData || [])
+        .filter(j => j.status === 'Finalizado')
+        .map(j => {
+          const userAtt = j.attendances?.find(a => a.user_id === user.id);
+          return { event: j, userStatus: userAtt?.status };
+        })
+        .filter(({ userStatus }) => userStatus === 'Presente' || userStatus === 'Ausente')
+        .filter(({ event }) => !ratedEventIds.has(event.id));
+      
+      const pendingRating = myAttendedInFinished
+        .sort((a, b) => new Date(b.event.date) - new Date(a.event.date))[0];
+      
       if (pendingRating) {
         const ratingPayload = {
-          id: pendingRating.id,
-          name: pendingRating.name || 'Janta',
-          dateFormatted: new Date(pendingRating.date).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }),
-          rawDate: pendingRating.date,
+          id: pendingRating.event.id,
+          name: pendingRating.event.name || 'Janta',
+          dateFormatted: new Date(pendingRating.event.date).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }),
+          rawDate: pendingRating.event.date,
         };
         setPendingRatingEvent(ratingPayload);
-        // Force the rating modal if there's a pending rating
         setRatingEvent(ratingPayload);
       } else {
         setPendingRatingEvent(null);
@@ -181,11 +188,13 @@ export default function DashboardPage() {
         const formattedJantas = jantasData.map(j => {
           const presentes = j.attendances?.filter(a => a.status === 'Presente') || [];
           const userAtt = j.attendances?.find(a => a.user_id === user.id);
+          const userStatus = userAtt ? userAtt.status : null;
           const responsiveisNomes = (j.responsibles || []).map(id => profileMap[id]).filter(Boolean).join(', ');
           const eventDate = new Date(j.date);
           return {
             id: j.id,
             name: j.name || 'Janta das Quintas',
+            userStatus: userStatus,
             date: eventDate.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }),
             dateFormatted: eventDate.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }),
             dayText: eventDate.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '').toUpperCase(),
@@ -368,6 +377,8 @@ export default function DashboardPage() {
   const handleMarkPaymentAsSent = async (eventId) => {
     try {
       await supabase.from('events').update({ payment_sent: true }).eq('id', eventId);
+      setShownPaymentPrompts(prev => new Set([...prev, eventId]));
+      setPaymentPromptEvent(null);
       await fetchDashboardData();
     } catch (err) {
       console.error('Erro ao marcar cobrança como enviada:', err);

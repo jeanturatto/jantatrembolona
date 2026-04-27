@@ -311,15 +311,13 @@ export default function JantasPage() {
 
   
 
-  // Tabs: Canceladas only for ADMIN
-  const filters = ['Todas', 'Abertas', 'Concluídas', ...(isAdmin ? ['Canceladas'] : [])];
+  // Filtros fixos para todos os usuarios
+  const filters = ['Todas', 'Abertas', 'Concluídas'];
 
   const filteredJantas = jantas.filter(j => {
     if (filter === 'Abertas') return j.status === 'Aberto';
     if (filter === 'Concluídas') return j.status === 'Finalizado';
-    if (filter === 'Canceladas') return j.status === 'Cancelado';
-    // "Todas" for non-admin hides Canceladas
-    return isAdmin ? true : j.status !== 'Cancelado';
+    return j.status !== 'Cancelado';
   });
 
   // Status badge styles

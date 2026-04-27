@@ -104,6 +104,17 @@ export default function LoginPage() {
   return (
     <div className="stakent-login-bg min-h-screen flex items-center justify-center p-4">
 
+      {/* Logo de fundo */}
+      {appLogoUrl && (
+        <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-0">
+          <img 
+            src={appLogoUrl} 
+            alt="Logo" 
+            className="w-64 h-64 object-contain opacity-30 blur-[2px]" 
+          />
+        </div>
+      )}
+
       {/* Decorative orbs */}
       <div className="fixed top-1/4 left-1/4 w-96 h-96 rounded-full bg-[#2842B5]/10 dark:bg-[#2842B5]/15 blur-[100px] pointer-events-none" />
       <div className="fixed bottom-1/4 right-1/4 w-64 h-64 rounded-full bg-[#B8ABCF]/08 dark:bg-[#B8ABCF]/10 blur-[80px] pointer-events-none" />
