@@ -9,6 +9,7 @@ export const EditEventModal = ({ isOpen, onClose, onSuccess, event, isResponsibl
   const [location, setLocation] = useState('');
   const [selectedResponsibles, setSelectedResponsibles] = useState([]);
   const [users, setUsers] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   // Map integration removed by user request
@@ -113,8 +114,18 @@ export const EditEventModal = ({ isOpen, onClose, onSuccess, event, isResponsibl
         {!isResponsibleOnly && (
           <div className="space-y-2">
             <label className="text-xs font-bold uppercase text-zinc-400">Cozinheiros (Responsáveis)</label>
+            <input 
+              type="text" 
+              placeholder="Buscar membro..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full p-2 mb-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg outline-none focus:border-zinc-900 dark:focus:border-white transition-all text-xs font-medium text-zinc-900 dark:text-white"
+            />
             <div className="max-h-48 overflow-y-auto space-y-2 p-1 border border-zinc-100 dark:border-zinc-800 rounded-xl">
-              {users.map(u => {
+              {users.filter(u => {
+                const uName = u.name || u.email.split('@')[0];
+                return uName.toLowerCase().includes(searchTerm.toLowerCase());
+              }).map(u => {
                 const uName = u.name || u.email.split('@')[0];
                 const uAvatar = u.avatar_url;
                 const isSelected = selectedResponsibles.includes(u.id);

@@ -53,7 +53,7 @@ export const PendingRatingsModal = ({ isOpen, onClose, onAllRated, user }) => {
           const userAtt = j.attendances?.find(a => a.user_id === user.id);
           return { ...j, userStatus: userAtt?.status };
         })
-        .filter(j => j.userStatus === 'Presente' || j.userStatus === 'Ausente')
+        .filter(j => j.userStatus === 'Presente' || j.userStatus === 'Confirmado')
         .filter(j => !ratedIds.has(j.id));
 
       setPendingEvents(pending);
@@ -70,6 +70,19 @@ export const PendingRatingsModal = ({ isOpen, onClose, onAllRated, user }) => {
 
   const currentEvent = pendingEvents[currentIndex];
   const active = hovered || stars;
+
+  const handleSkip = () => {
+    const isLast = currentIndex >= pendingEvents.length - 1;
+    if (isLast) {
+      onAllRated?.();
+      onClose();
+    } else {
+      setCurrentIndex(prev => prev + 1);
+      setStars(0);
+      setHovered(0);
+      setComment('');
+    }
+  };
 
   const handleSubmit = async () => {
     if (stars === 0 || submitting || !currentEvent) return;
@@ -193,26 +206,35 @@ export const PendingRatingsModal = ({ isOpen, onClose, onAllRated, user }) => {
               <p className="text-[10px] text-zinc-300 dark:text-[#3a3a50] mt-1 text-right">{comment.length}/150</p>
             </div>
 
-            <button
-              onClick={handleSubmit}
-              disabled={stars === 0 || submitting}
-              className="w-full py-3 bg-[#28B5] hover:bg-[#3452c5] disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2"
-            >
-              {submitting ? (
-                <>
-                  <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                  Enviando...
-                </>
-              ) : (
-                <>
-                  {currentIndex >= pendingEvents.length - 1 ? 'Finalizar' : 'Próxima Avaliação'}
-                  <Star size={15} />
-                </>
-              )}
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={handleSkip}
+                disabled={submitting}
+                className="flex-1 py-3 border border-zinc-200 dark:border-white/[0.09] text-zinc-500 dark:text-zinc-400 rounded-xl font-semibold text-sm hover:bg-zinc-50 dark:hover:bg-white/[0.03] transition-colors"
+              >
+                Ignorar dessa vez
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={stars === 0 || submitting}
+                className="flex-1 py-3 bg-[#28B5] hover:bg-[#3452c5] disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2"
+              >
+                {submitting ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    Enviando...
+                  </>
+                ) : (
+                  <>
+                    {currentIndex >= pendingEvents.length - 1 ? 'Finalizar' : 'Próxima Avaliação'}
+                    <Star size={15} />
+                  </>
+                )}
+              </button>
+            </div>
           </>
         ) : (
           <div className="text-center py-8">
