@@ -98,7 +98,7 @@ export const EventDetailModal = ({
   const isOpen_ = event.status === 'Aberto';
   const userStatus = event.userStatus;
 
-  const btnBase = 'flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border text-xs font-bold transition-all active:scale-[0.97]';
+  const btnBase = 'flex-1 flex items-center justify-center gap-1 px-1.5 py-1.5 rounded-xl border text-[9px] font-bold transition-all active:scale-[0.97]';
 
   const getBtnStyle = (thisStatus) => {
     if (!userStatus) {
@@ -171,13 +171,13 @@ export const EventDetailModal = ({
               <div className="mt-2 space-y-1.5 border-t border-zinc-200 dark:border-zinc-700 pt-2 animate-in slide-in-from-top-2 fade-in duration-200">
                 {event.allAttendeesList.map((att, idx) => (
                   <div key={idx} className="flex items-center gap-2 p-1.5 bg-white dark:bg-zinc-900/50 rounded-lg border border-zinc-100 dark:border-zinc-800/50">
-                    <div className="w-6 h-6 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center text-[10px] font-bold text-green-600 dark:text-green-300 shrink-0 overflow-hidden">
-                      {att.avatar_url ? (
-                        <img src={att.avatar_url} alt={att.initial} className="w-full h-full object-cover" />
-                      ) : (
-                        att.initial
-                      )}
-                    </div>
+                      <div className="w-6 h-6 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center text-[10px] font-bold text-green-600 dark:text-green-300 shrink-0 overflow-hidden" title={att.name}>
+                        {att.avatar_url ? (
+                          <img src={att.avatar_url} alt={att.name} className="w-full h-full object-cover" />
+                        ) : (
+                          att.initial || att.name.charAt(0).toUpperCase()
+                        )}
+                      </div>
                     <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200 capitalize truncate">{att.name}</span>
                   </div>
                 ))}
@@ -209,7 +209,7 @@ export const EventDetailModal = ({
                       className="flex items-center justify-between px-2.5 py-1.5 bg-white dark:bg-zinc-800 rounded-lg border border-violet-100 dark:border-violet-800/20"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-violet-100 dark:bg-violet-900/40 flex items-center justify-center text-[10px] font-bold text-violet-600 dark:text-violet-300 shrink-0">
+                        <div className="w-6 h-6 rounded-full bg-violet-100 dark:bg-violet-900/40 flex items-center justify-center text-[10px] font-bold text-violet-600 dark:text-violet-300 shrink-0" title={name}>
                           {name.charAt(0).toUpperCase()}
                         </div>
                         <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200 capitalize">{name}</span>
@@ -263,9 +263,9 @@ export const EventDetailModal = ({
                 const nome = r.name || r.email?.split('@')[0] || 'Usuário';
                 return (
                   <div key={r.id} className="flex items-center gap-3 p-2 bg-zinc-50 dark:bg-zinc-800 rounded-lg">
-                    <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center font-bold text-xs text-zinc-600 dark:text-zinc-300 overflow-hidden shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center font-bold text-xs text-zinc-600 dark:text-zinc-300 overflow-hidden shrink-0" title={nome}>
                       {r.avatar_url ? (
-                        <img src={r.avatar_url} alt={nome || ''} className="w-full h-full object-cover" />
+                        <img src={r.avatar_url} alt={nome} className="w-full h-full object-cover" />
                       ) : (nome || 'U').charAt(0).toUpperCase()}
                     </div>
                     <p className="text-sm font-bold text-zinc-900 dark:text-white capitalize">{nome}</p>
