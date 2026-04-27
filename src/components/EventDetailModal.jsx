@@ -318,34 +318,34 @@ export const EventDetailModal = ({
         )}
 
         {/* Ações do Modal Footer */}
-        <div className="flex flex-col sm:flex-row gap-3 pt-2">
+        <div className="flex flex-col sm:flex-row gap-2 pt-2">
           {isOpen_ && isUserResponsible && onEditClick && (
             <button
               onClick={() => { onEditClick(event); onClose(); }}
-              className="flex-1 p-3 border-2 border-blue-200 dark:border-blue-900/50 bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 rounded-xl font-bold text-sm hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors flex items-center justify-center gap-2"
+              className="flex-1 py-2 px-3 border border-blue-200 dark:border-blue-900/50 bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 rounded-xl font-bold text-xs hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors flex items-center justify-center gap-2"
             >
-              <Edit3 size={16} /> Editar Informações
+              <Edit3 size={14} /> Editar
             </button>
           )}
           {event.status === 'Finalizado' && (isUserResponsible || isAdmin) && onPaymentClick && (
             <button
                onClick={() => { onPaymentClick(event); onClose(); }}
-               className="flex-1 p-3 border-2 border-emerald-200 text-emerald-600 bg-emerald-50 dark:bg-emerald-900/10 dark:border-emerald-800/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/20 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2"
+               className="flex-1 py-2 px-3 border border-emerald-200 text-emerald-600 bg-emerald-50 dark:bg-emerald-900/10 dark:border-emerald-800/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/20 rounded-xl font-bold text-xs transition-colors flex items-center justify-center gap-2"
             >
-              <span className="text-xl">💰</span> Gerar Cobrança
+              <span className="text-base">💰</span> Cobrança
             </button>
           )}
           {pastDeadline && (isUserResponsible || isAdmin) && onConfirmacaoClick && (
             <button
                onClick={() => { onConfirmacaoClick(event); onClose(); }}
-               className="flex-1 p-3 border-2 border-green-200 text-green-600 bg-green-50 dark:bg-green-900/10 dark:border-green-800/40 hover:bg-green-100 dark:hover:bg-green-900/20 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2"
+               className="flex-1 py-2 px-3 border border-green-200 text-green-600 bg-green-50 dark:bg-green-900/10 dark:border-green-800/40 hover:bg-green-100 dark:hover:bg-green-900/20 rounded-xl font-bold text-xs transition-colors flex items-center justify-center gap-2"
             >
-              <MessageSquare size={16} /> WhatsApp
+              <MessageSquare size={14} /> WhatsApp
             </button>
           )}
           <button
             onClick={onClose}
-            className="flex-1 p-3 border border-zinc-200 dark:border-zinc-700 rounded-xl font-bold text-sm text-zinc-900 dark:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+            className="flex-1 py-2 px-3 border border-zinc-200 dark:border-zinc-700 rounded-xl font-bold text-xs text-zinc-900 dark:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
           >
             Fechar
           </button>
