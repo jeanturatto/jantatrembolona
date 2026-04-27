@@ -200,12 +200,14 @@ export const PaymentModal = ({ isOpen, onClose, event, onSuccess }) => {
   };
 
   const handleClose = async () => {
+    console.log('handleClose called', { eventId: event?.id, totalNum, event });
     if (totalNum > 0) {
       try {
-        await supabase
+        const result = await supabase
           .from('events')
           .update({ payment_value: totalNum })
           .eq('id', event.id);
+        console.log('Save result:', result);
       } catch (err) {
         console.error('PaymentModal: erro ao salvar valor ao fechar:', err);
       }
