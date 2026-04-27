@@ -10,7 +10,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'icons.svg'],
+      includeAssets: ['favicon.svg', 'icons.svg', 'favicon-16x16.png', 'favicon-32x32.png'],
       manifest: {
         name: 'Janta Trembolona',
         short_name: 'Janta',
@@ -21,9 +21,15 @@ export default defineConfig({
         icons: [
           {
             src: '/favicon.svg',
-            sizes: '192x192 512x512',
+            sizes: 'any',
             type: 'image/svg+xml',
             purpose: 'any maskable'
+          },
+          {
+            src: '/favicon-32x32.png',
+            sizes: '32x32',
+            type: 'image/png',
+            purpose: 'any'
           }
         ]
       }

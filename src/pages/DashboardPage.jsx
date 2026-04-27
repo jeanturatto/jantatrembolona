@@ -112,6 +112,7 @@ export default function DashboardPage() {
       if (jantasErr) throw jantasErr;
 
       const userCreatedAt = userProfile?.created_at;
+      console.log('User created at:', userCreatedAt, 'User ID:', user?.id);
 
       // ── Aniversariantes do mês
       const birthday = (allProfilesWithBirthday || []).filter(p => {
@@ -526,11 +527,18 @@ export default function DashboardPage() {
         </Card>
 
         <Card className="!p-5 md:!p-6 flex flex-col justify-between h-28 md:h-32">
-          <span className="text-[10px] font-extrabold text-zinc-400 dark:text-[#5a5a80] tracking-widest uppercase">Total do Ano</span>
+          <span className="text-[10px] font-extrabold text-zinc-400 dark:text-[#5a5a80] tracking-widest uppercase">META</span>
           <span className="text-4xl md:text-5xl font-extrabold text-zinc-900 dark:text-white tracking-tighter -ml-1">
-            {String(stats.totalJantas).padStart(2, '0')}
+            1/semana
           </span>
-          <span className="text-[10px] text-zinc-400 font-medium hidden sm:block">Meta: {jantas.length + 5} jantas</span>
+          <span className="text-[10px] text-zinc-400 font-medium hidden sm:block">
+            {(() => {
+              const now = new Date();
+              const jan1 = new Date(now.getFullYear(), 0, 1);
+              const weekNum = Math.ceil(((now - jan1) / 86400000 + jan1.getDay() + 1) / 7);
+              return `Semana ${weekNum} de 52`;
+            })()}
+          </span>
         </Card>
       </div>
 

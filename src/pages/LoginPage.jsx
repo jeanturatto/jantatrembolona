@@ -3,6 +3,7 @@ import { Utensils, Ban, ArrowRight } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Modal } from '../components/Modal';
+import { PendingRatingsModal } from '../components/PendingRatingsModal';
 import { supabase } from '../lib/supabase';
 
 const translateError = (errorMsg) => {
@@ -46,6 +47,8 @@ export default function LoginPage() {
   const [success, setSuccess] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isBlockedModalOpen, setIsBlockedModalOpen] = useState(false);
+  const [isPendingRatingsOpen, setIsPendingRatingsOpen] = useState(false);
+  const [pendingUser, setPendingUser] = useState(null);
   const [appLogoUrl, setAppLogoUrl] = useState('https://raw.githubusercontent.com/jeanturatto/jantatrembolona/main/logo_trembo.png');
   const [appName, setAppName] = useState('Janta Trembolona');
 
@@ -74,7 +77,46 @@ export default function LoginPage() {
         else setError(translateError(error.message));
         setIsLoading(false);
       } else {
-        navigate('/');
+        const { data: { user: loggedUser } } = await supabase.auth.getUser();
+        const today = new Date().toISOString().split('T')[0];
+
+        const { data: userProfile } = await supabase
+          .from('profiles')
+          .select('created_at')
+          .eq('id', loggedUser.id)
+          .single();
+
+        const userCreatedAt = userProfile?.created_at;
+
+        const { data: ratings } = await supabase
+          .from('ratings')
+          .select('event_id')
+          .eq('user_id', loggedUser.id);
+
+        const ratedIds = new Set((ratings || []).map(r => r.event_id));
+
+        const { data: events } = await supabase
+          .from('events')
+          .select('*, attendances(user_id, status)')
+          .eq('status', 'Finalizado')
+          .lte('date', today)
+          .order('date', { ascending: false });
+
+        const pending = (events || [])
+          .filter(j => !userCreatedAt || new Date(j.date) >= new Date(userCreatedAt))
+          .map(j => {
+            const userAtt = j.attendances?.find(a => a.user_id === loggedUser.id);
+            return { ...j, userStatus: userAtt?.status };
+          })
+          .filter(j => j.userStatus === 'Presente' || j.userStatus === 'Ausente')
+          .filter(j => !ratedIds.has(j.id));
+
+        if (pending.length > 0) {
+          setPendingUser(loggedUser);
+          setIsPendingRatingsOpen(true);
+        } else {
+          navigate('/');
+        }
       }
     } else {
       const { error } = await signUp(email, password, { name, phone, pix, data_nascimento: dataNascimento || null });
@@ -254,6 +296,16 @@ export default function LoginPage() {
           </button>
         </div>
       </Modal>
+
+      <PendingRatingsModal
+        isOpen={isPendingRatingsOpen}
+        user={pendingUser}
+        onClose={() => setIsPendingRatingsOpen(false)}
+        onAllRated={() => {
+          setIsPendingRatingsOpen(false);
+          navigate('/');
+        }}
+      />
     </div>
   );
 }
