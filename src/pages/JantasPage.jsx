@@ -228,16 +228,14 @@ export default function JantasPage() {
     try {
       const { error } = await supabase
         .from('ratings')
-        .insert({
-          event_id: eventId,
-          user_id: user.id,
-          stars,
-          comment
-        });
+        .upsert(
+          { event_id: eventId, user_id: user.id, stars, comment },
+          { onConflict: 'event_id,user_id' }
+        );
 
       if (error) throw error;
       setRatingEvent(null);
-      fetchJantas();
+      setMyRatingsIds(prev => new Set([...prev, eventId]));
     } catch (err) {
       console.error('Erro ao avaliar:', err);
       alert('Erro ao enviar avaliação. Tente novamente.');

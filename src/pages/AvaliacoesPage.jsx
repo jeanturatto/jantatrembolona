@@ -100,14 +100,7 @@ export default function AvaliacoesPage() {
     try {
       const { error } = await supabase.from('ratings').delete().eq('id', ratingId);
       if (error) throw error;
-      // Atualiza localmente para não recarregar tudo
-      setEvents(prev => prev.map(e => {
-        if (e.id !== eventId) return e;
-        const newRatings = e.ratings.filter(r => r.id !== ratingId);
-        if (newRatings.length === 0) return null;
-        const avg = newRatings.reduce((s, r) => s + r.stars, 0) / newRatings.length;
-        return { ...e, ratings: newRatings, avgStars: avg, totalRatings: newRatings.length };
-      }).filter(Boolean));
+      fetchAvaliacoes();
     } catch (err) {
       alert('Erro ao remover avaliação: ' + err.message);
     } finally {
