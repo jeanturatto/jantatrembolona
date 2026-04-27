@@ -106,11 +106,11 @@ export default function LoginPage() {
 
       {/* Logo de fundo */}
       {appLogoUrl && (
-        <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-0">
+        <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden">
           <img 
             src={appLogoUrl} 
             alt="Logo" 
-            className="w-64 h-64 object-contain opacity-30 blur-[2px]" 
+            className="w-full h-full object-contain opacity-20 blur-[1px]" 
           />
         </div>
       )}
