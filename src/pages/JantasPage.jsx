@@ -11,6 +11,7 @@ import { AdminAttendanceModal } from '../components/AdminAttendanceModal';
 import { PaymentModal } from '../components/PaymentModal';
 import { RatingModal } from '../components/RatingModal';
 import { ConfirmacaoModal } from '../components/ConfirmacaoModal';
+import { PaymentPromptModal } from '../components/PaymentPromptModal';
 
 // Regra: o prazo de confirmação encerra no DIA ANTERIOR à janta às 16:00 BRT.
 const isEventPastDeadline = (eventDateStr) => {
@@ -56,6 +57,8 @@ export default function JantasPage() {
   const [ratingLoading, setRatingLoading] = useState(false);
   const [myRatingsIds, setMyRatingsIds] = useState(new Set());
   const [confirmacaoEvent, setConfirmacaoEvent] = useState(null);
+  const [paymentPromptEvent, setPaymentPromptEvent] = useState(null);
+  const [shownPaymentPrompts, setShownPaymentPrompts] = useState(new Set());
 
   const fetchJantas = useCallback(async () => {
     if (!user?.id) return;
@@ -133,6 +136,7 @@ export default function JantasPage() {
             userStatus: userAtt ? userAtt.status : null,
             created_by: j.created_by,
             payment_value: j.payment_value || null,
+            payment_sent: j.payment_sent || false,
             guests: Array.isArray(j.guests) ? j.guests : [],
           };
         });
@@ -160,6 +164,24 @@ export default function JantasPage() {
   }, [user?.id]);
 
   useEffect(() => { fetchJantas(); }, [fetchJantas]);
+
+  // Check for payment prompts when jantas change
+  useEffect(() => {
+    if (!jantas.length || !user?.id) return;
+    
+    const recentlyFinalized = jantas.find(j => 
+      j.status === 'Finalizado' && 
+      j.responsibles.includes(user.id) &&
+      !j.payment_sent &&
+      !j.payment_value &&
+      !shownPaymentPrompts.has(j.id)
+    );
+
+    if (recentlyFinalized) {
+      setPaymentPromptEvent(recentlyFinalized);
+      setShownPaymentPrompts(prev => new Set([...prev, recentlyFinalized.id]));
+    }
+  }, [jantas, user?.id, shownPaymentPrompts]);
 
   // Re-busca dados quando a aba volta ao foco
   useEffect(() => {
@@ -307,6 +329,15 @@ export default function JantasPage() {
   };
 
   const canEdit = (janta) => isAdmin;
+
+  const handleMarkPaymentAsSent = async (eventId) => {
+    try {
+      await supabase.from('events').update({ payment_sent: true }).eq('id', eventId);
+      await fetchJantas();
+    } catch (err) {
+      console.error('Erro ao marcar cobrança como enviada:', err);
+    }
+  };
 
   // Tabs: Canceladas only for ADMIN
   const filters = ['Todas', 'Abertas', 'Concluídas', ...(isAdmin ? ['Canceladas'] : [])];
@@ -576,6 +607,13 @@ export default function JantasPage() {
         isOpen={!!confirmacaoEvent}
         onClose={() => setConfirmacaoEvent(null)}
         event={confirmacaoEvent}
+      />
+      <PaymentPromptModal
+        isOpen={!!paymentPromptEvent}
+        event={paymentPromptEvent}
+        onClose={() => setPaymentPromptEvent(null)}
+        onGeneratePayment={(event) => setPaymentEvent(event)}
+        onMarkAsSent={handleMarkPaymentAsSent}
       />
     </div>
   );
