@@ -236,11 +236,9 @@ export default function Layout() {
                 className="flex-1 flex flex-col items-center justify-center gap-0.5 py-3 text-zinc-400 dark:text-zinc-500 active:bg-zinc-100 dark:active:bg-white/[0.05] transition-colors min-w-0"
               >
                 <div className="w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-orange-600 font-bold text-xs overflow-hidden">
-                  {appConfig.iconUrl
-                    ? <img src={appConfig.iconUrl} alt="app" className="w-full h-full object-cover" />
-                    : profile?.avatar_url
-                      ? <img src={profile.avatar_url} alt="av" className="w-full h-full object-cover" />
-                      : userInitial}
+                  {profile?.avatar_url
+                    ? <img src={profile.avatar_url} alt="av" className="w-full h-full object-cover" />
+                    : userInitial}
                 </div>
                 <span className="text-[9px] font-bold tracking-wide truncate max-w-full px-1">Perfil</span>
               </button>
