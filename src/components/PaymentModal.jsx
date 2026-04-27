@@ -183,25 +183,6 @@ export const PaymentModal = ({ isOpen, onClose, event, onSuccess }) => {
             </div>
           </div>
 
-          {/* Lista de participantes + convidados */}
-          {(attendees.length > 0 || guestNames.length > 0) && (
-            <div className="space-y-1.5">
-              <p className="text-[10px] font-bold uppercase text-zinc-400 tracking-wider">Participantes</p>
-              <div className="flex flex-wrap gap-1.5">
-                {attendees.map((name, i) => (
-                  <span key={i} className="px-2.5 py-1 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/40 text-green-700 dark:text-green-400 rounded-full text-[11px] font-semibold">
-                    {name}
-                  </span>
-                ))}
-                {guestNames.map((name, i) => (
-                  <span key={`g-${i}`} className="px-2.5 py-1 bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800/40 text-violet-700 dark:text-violet-400 rounded-full text-[11px] font-semibold">
-                    {name} <span className="opacity-60 text-[10px]">(conv.)</span>
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Input do valor total */}
           <div className="space-y-2">
             <label className="text-[10px] font-bold uppercase text-zinc-400 tracking-wider">Valor Total Gasto</label>

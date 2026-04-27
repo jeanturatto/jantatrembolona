@@ -107,10 +107,39 @@ export const ConfirmacaoModal = ({ isOpen, onClose, event }) => {
     setTimeout(() => setCopied(false), 2500);
   };
 
-  const handleShareWhatsApp = () => {
+  const handleShareWhatsApp = async () => {
     const msg = buildMessage();
-    const url = `https://wa.me/?text=${encodeURIComponent(msg)}`;
-    window.open(url, '_blank');
+    
+    // Tenta usar Web Share API primeiro (funciona melhor no mobile)
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Confirmação - ${event?.name || 'Janta'}`,
+          text: msg,
+        });
+        return;
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          console.log('Web Share falhou, tentando método alternativo');
+        }
+      }
+    }
+    
+    // Fallback: copia para área de transferência
+    try {
+      await navigator.clipboard.writeText(msg);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch {
+      const el = document.createElement('textarea');
+      el.value = msg;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    }
   };
 
   if (!isOpen || !event) return null;
@@ -206,7 +235,7 @@ export const ConfirmacaoModal = ({ isOpen, onClose, event }) => {
             disabled={loading}
             className="flex-1 py-3 rounded-xl font-bold text-sm bg-green-500 hover:bg-green-600 text-white transition-all flex items-center justify-center gap-2 disabled:opacity-50"
           >
-            <MessageSquare size={16} /> Enviar WhatsApp
+            <MessageSquare size={16} /> Compartilhar
           </button>
         </div>
       </div>
