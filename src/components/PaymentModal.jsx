@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Copy, CheckCircle, Receipt, Users, Calculator, RefreshCw, Utensils, Share } from 'lucide-react';
+import { Copy, CheckCircle, Receipt, Users, Calculator, RefreshCw, Utensils, MessageSquare } from 'lucide-react';
 import { Modal } from './Modal';
 import { supabase } from '../lib/supabase';
 
@@ -167,6 +167,38 @@ export const PaymentModal = ({ isOpen, onClose, event, onSuccess }) => {
     await handleCopy();
   };
 
+  const handleShareWhatsApp = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Cobrança - ${event?.name || 'Janta'}`,
+          text: generatedMessage,
+        });
+        return;
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          console.log('Web Share falhou, tentando método alternativo');
+        }
+      }
+    }
+    
+    // Fallback: copia para área de transferência
+    try {
+      await navigator.clipboard.writeText(generatedMessage);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch {
+      const el = document.createElement('textarea');
+      el.value = generatedMessage;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    }
+  };
+
   const handleClose = () => {
     setGeneratedMessage('');
     setCopied(false);
@@ -299,14 +331,11 @@ export const PaymentModal = ({ isOpen, onClose, event, onSuccess }) => {
             </button>
             {generatedMessage ? (
               <button
-                onClick={handleShare}
-                className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${
-                  copied
-                    ? 'bg-green-600 hover:bg-green-700 text-white'
-                    : 'bg-[#2842B5] hover:bg-[#3452c5] text-white'
-                }`}
+                onClick={handleShareWhatsApp}
+                disabled={loading}
+                className="flex-1 py-3 rounded-xl font-bold text-sm bg-green-500 hover:bg-green-600 text-white transition-all flex items-center justify-center gap-2 disabled:opacity-50"
               >
-                {copied ? <><CheckCircle size={15} /> Copiado!</> : <><Share size={15} /> Compartilhar</>}
+                {copied ? <><CheckCircle size={15} /> Copiado!</> : <><MessageSquare size={15} /> Compartilhar</>}
               </button>
             ) : (
               <button
