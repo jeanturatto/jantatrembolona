@@ -108,7 +108,7 @@ export default function LoginPage() {
             const userAtt = j.attendances?.find(a => a.user_id === loggedUser.id);
             return { ...j, userStatus: userAtt?.status };
           })
-          .filter(j => j.userStatus === 'Presente' || j.userStatus === 'Ausente')
+          .filter(j => j.userStatus === 'Presente' || j.userStatus === 'Confirmado')
           .filter(j => !ratedIds.has(j.id));
 
         if (pending.length > 0) {
