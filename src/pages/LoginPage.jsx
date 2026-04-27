@@ -46,22 +46,11 @@ export default function LoginPage() {
   const [success, setSuccess] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isBlockedModalOpen, setIsBlockedModalOpen] = useState(false);
-  const [appLogoUrl, setAppLogoUrl] = useState('');
+  const [appLogoUrl, setAppLogoUrl] = useState('https://raw.githubusercontent.com/jeanturatto/jantatrembolona/main/logo_trembo.png');
   const [appName, setAppName] = useState('Janta Trembolona');
 
   const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
-
-  useEffect(() => {
-    supabase.from('app_settings').select('key, value').then(({ data }) => {
-      if (data) {
-        data.forEach(({ key, value }) => {
-          if (key === 'app_icon_url' && value) setAppLogoUrl(value);
-          if (key === 'app_name' && value) setAppName(value);
-        });
-      }
-    });
-  }, []);
 
   useEffect(() => {
     if (localStorage.getItem('show_blocked_modal') === 'true') {
