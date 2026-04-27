@@ -18,10 +18,14 @@ export const PaymentModal = ({ isOpen, onClose, event, onSuccess }) => {
   useEffect(() => {
     if (!isOpen || !event?.id) return;
 
+    setTotalValue('');
     setGeneratedMessage('');
     setCopied(false);
+    setAttendees([]);
+    setResponsaveis([]);
     // Carrega convidados do evento
     setGuestNames(Array.isArray(event?.guests) ? event.guests : []);
+    setSelectedRecebedorId('');
 
     const fetchData = async () => {
       setLoading(true);
@@ -108,17 +112,21 @@ export const PaymentModal = ({ isOpen, onClose, event, onSuccess }) => {
     if (!totalNum || totalNum <= 0) return;
     setSaving(true);
     try {
-      // Salva o valor no banco para que admin possa editar depois
       await supabase
         .from('events')
         .update({ payment_value: totalNum })
         .eq('id', event.id);
 
       setGeneratedMessage(buildMessage());
+      try {
+        const saved = localStorage.getItem('shownPaymentPrompts');
+        const shownSet = saved ? new Set(JSON.parse(saved)) : new Set();
+        shownSet.add(event.id);
+        localStorage.setItem('shownPaymentPrompts', JSON.stringify([...shownSet]));
+      } catch (_) {}
       onSuccess?.();
     } catch (err) {
       console.error('PaymentModal: erro ao salvar:', err);
-      // Mesmo se falhar no banco, mostra a mensagem
       setGeneratedMessage(buildMessage());
     } finally {
       setSaving(false);
@@ -191,7 +199,24 @@ export const PaymentModal = ({ isOpen, onClose, event, onSuccess }) => {
     window.open(url, '_blank');
   };
 
-  const handleClose = () => {
+  const handleClose = async () => {
+    if (totalNum > 0) {
+      try {
+        await supabase
+          .from('events')
+          .update({ payment_value: totalNum })
+          .eq('id', event.id);
+      } catch (err) {
+        console.error('PaymentModal: erro ao salvar valor ao fechar:', err);
+      }
+      try {
+        const saved = localStorage.getItem('shownPaymentPrompts');
+        const shownSet = saved ? new Set(JSON.parse(saved)) : new Set();
+        shownSet.add(event.id);
+        localStorage.setItem('shownPaymentPrompts', JSON.stringify([...shownSet]));
+      } catch (_) {}
+      onSuccess?.();
+    }
     setGeneratedMessage('');
     setCopied(false);
     onClose();

@@ -59,14 +59,13 @@ export default function DashboardPage() {
   const [confirmacaoEvent, setConfirmacaoEvent] = useState(null);
   // Payment prompt
   const [paymentPromptEvent, setPaymentPromptEvent] = useState(null);
+  const [paymentPromptChecked, setPaymentPromptChecked] = useState(false);
   const [shownPaymentPrompts, setShownPaymentPrompts] = useState(() => {
     try {
-      const saved = sessionStorage.getItem('shownPaymentPrompts');
+      const saved = localStorage.getItem('shownPaymentPrompts');
       return saved ? new Set(JSON.parse(saved)) : new Set();
     } catch { return new Set(); }
   });
-  const [sessionChecked, setSessionChecked] = useState(false);
-  // Ranking
   const [activeTab, setActiveTab] = useState('Abertas');
   const [ranking, setRanking] = useState([]);
 
@@ -376,7 +375,7 @@ export default function DashboardPage() {
       await supabase.from('events').update({ payment_sent: true }).eq('id', eventId);
       const newSet = new Set([...shownPaymentPrompts, eventId]);
       setShownPaymentPrompts(newSet);
-      sessionStorage.setItem('shownPaymentPrompts', JSON.stringify([...newSet]));
+      localStorage.setItem('shownPaymentPrompts', JSON.stringify([...newSet]));
       setPaymentPromptEvent(null);
       await fetchDashboardData();
     } catch (err) {
@@ -387,7 +386,7 @@ export default function DashboardPage() {
   // Check for payment prompts when jantas change
   // Só mostra popup se: usuario é responsáveis E ainda não gerou cobrança E não foi marcada como enviada
   useEffect(() => {
-    if (!sessionChecked || !jantas.length || !user?.id) return;
+    if (!paymentPromptChecked || !jantas.length || !user?.id) return;
     
     const pendingPayment = jantas.find(j => 
       j.status === 'Finalizado' && 
@@ -399,20 +398,22 @@ export default function DashboardPage() {
 
     if (pendingPayment) {
       setPaymentPromptEvent(pendingPayment);
+    } else {
+      setPaymentPromptEvent(null);
     }
-  }, [jantas, user?.id, shownPaymentPrompts, sessionChecked]);
+  }, [jantas, user?.id, shownPaymentPrompts, paymentPromptChecked]);
 
   // Init session check
   useEffect(() => {
-    setSessionChecked(true);
+    setPaymentPromptChecked(true);
   }, []);
 
-  // Quando usuario fecha o popup (qualquer ação), marca para não mostrar mais nesta sessão
+  // Quando usuario fecha o popup (qualquer ação), marca para não mostrar mais
   const handlePaymentPromptClose = () => {
     if (paymentPromptEvent) {
       const newSet = new Set([...shownPaymentPrompts, paymentPromptEvent.id]);
       setShownPaymentPrompts(newSet);
-      sessionStorage.setItem('shownPaymentPrompts', JSON.stringify([...newSet]));
+      localStorage.setItem('shownPaymentPrompts', JSON.stringify([...newSet]));
     }
     setPaymentPromptEvent(null);
   };
@@ -799,9 +800,9 @@ export default function DashboardPage() {
       {/* Modal de pagamento: SÓ abre quando usuario clicar em Gerar Cobrança */}
       <PaymentModal
         isOpen={!!paymentModalEvent}
-        onClose={() => setPaymentModalEvent(null)}
+        onClose={() => { setPaymentModalEvent(null); fetchDashboardData(); }}
         event={paymentModalEvent}
-        onSuccess={fetchDashboardData}
+        onSuccess={() => { fetchDashboardData(); }}
       />
       <ConfirmacaoModal
         isOpen={!!confirmacaoEvent}
@@ -816,7 +817,7 @@ export default function DashboardPage() {
           if (paymentPromptEvent) {
             const newSet = new Set([...shownPaymentPrompts, paymentPromptEvent.id]);
             setShownPaymentPrompts(newSet);
-            sessionStorage.setItem('shownPaymentPrompts', JSON.stringify([...newSet]));
+            localStorage.setItem('shownPaymentPrompts', JSON.stringify([...newSet]));
           }
           setPaymentModalEvent(event); 
           setPaymentPromptEvent(null); 
