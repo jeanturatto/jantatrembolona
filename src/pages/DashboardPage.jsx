@@ -84,7 +84,7 @@ export default function DashboardPage() {
         supabase.from('attendances').select('*').eq('user_id', user.id),
         supabase.from('profiles').select('id, name, email, avatar_url'),
         supabase.from('profiles').select('id, name, avatar_url, data_nascimento').not('data_nascimento', 'is', null),
-        supabase.from('events').select('*, attendances(user_id, status)').eq('status', 'Finalizado').gte('date', `${currentYear}-01-01`).lte('date', today),
+        supabase.from('events').select('*, attendances(user_id, status)').eq('status', 'Finalizado').lte('date', today),
         supabase.from('ratings').select('event_id').eq('user_id', user.id),
       ]);
 
@@ -779,13 +779,8 @@ export default function DashboardPage() {
         onSubmit={handleRatingSubmit}
         loading={ratingLoading}
         unclosable={!!(pendingRatingEvent && ratingEvent?.id === pendingRatingEvent.id)}
-      />{/* Modal de pagamento: auto-popup para responsaveis de jantas finalizadas */}
-      <PaymentModal
-        isOpen={!!pendingPaymentEvent && !paymentModalEvent}
-        onClose={() => setPendingPaymentEvent(null)}
-        event={pendingPaymentEvent}
-        onSuccess={fetchDashboardData}
       />
+      {/* Modal de pagamento: SÓ abre quando usuario clicar em Gerar Cobrança */}
       <PaymentModal
         isOpen={!!paymentModalEvent}
         onClose={() => setPaymentModalEvent(null)}
