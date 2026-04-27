@@ -142,7 +142,7 @@ export default function JantasPage() {
             })),
             userStatus: userAtt ? userAtt.status : null,
             created_by: j.created_by,
-            canRate: isAfterUserJoined,
+            canRate: isAfterUserJoined && (userAtt?.status === 'Presente' || userAtt?.status === 'Confirmado'),
             payment_value: j.payment_value || null,
             payment_sent: j.payment_sent || false,
             guests: Array.isArray(j.guests) ? j.guests : [],

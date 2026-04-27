@@ -144,7 +144,19 @@ export default function DashboardPage() {
         .filter(j => !userCreatedAt || new Date(j.date) >= new Date(userCreatedAt))
         .map(j => {
           const userAtt = j.attendances?.find(a => a.user_id === user.id);
-          return { event: j, userStatus: userAtt?.status };
+          const userStatus = userAtt ? userAtt.status : null;
+          return {
+            event: j,
+            userStatus: userStatus,
+            rawName: j.name,
+            rawLocation: j.location,
+            location: j.location,
+            status: j.status,
+            responsiveisNomes: responsiveisNomes || 'Nenhum responsável',
+            responsibles: j.responsibles || [],
+            payment_sent: j.payment_sent || false,
+            payment_value: j.payment_value || null,
+            canRate: isAfterUserJoined && (userAtt?.status === 'Presente' || userAtt?.status === 'Confirmado'),
         })
         .filter(({ userStatus }) => userStatus === 'Presente' || userStatus === 'Ausente')
         .filter(({ event }) => !ratedEventIds.has(event.id));
@@ -205,7 +217,7 @@ export default function DashboardPage() {
             responsibles: j.responsibles || [],
             payment_sent: j.payment_sent || false,
             payment_value: j.payment_value || null,
-            canRate: isAfterUserJoined,
+            canRate: isAfterUserJoined && (userAtt?.status === 'Presente' || userAtt?.status === 'Confirmado'),
             attendees: presentes.length,
             // Lista com nome, avatar e inicial dos primeiros 3 presentes
             attendeesList: presentes.slice(0, 3).map(a => ({
