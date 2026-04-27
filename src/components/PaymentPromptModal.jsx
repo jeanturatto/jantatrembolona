@@ -5,6 +5,8 @@ import { Receipt, CheckCircle, X } from 'lucide-react';
 export const PaymentPromptModal = ({ isOpen, event, onClose, onGeneratePayment, onMarkAsSent }) => {
   if (!isOpen || !event) return null;
 
+  const eventDate = event.rawDate ? new Date(event.rawDate).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }) : event.dateFormatted;
+
   return createPortal(
     <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/60 dark:bg-black/80 backdrop-blur-md animate-in fade-in">
       <div className="bg-white dark:bg-zinc-900 w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden">
@@ -25,6 +27,9 @@ export const PaymentPromptModal = ({ isOpen, event, onClose, onGeneratePayment, 
               A janta <strong className="text-zinc-900 dark:text-white">"{event.name}"</strong> foi concluída.
             </p>
             <p className="text-zinc-500 dark:text-zinc-400 text-xs mt-2">
+              {eventDate}
+            </p>
+            <p className="text-zinc-500 dark:text-zinc-400 text-xs mt-1">
               O que você gostaria de fazer?
             </p>
           </div>

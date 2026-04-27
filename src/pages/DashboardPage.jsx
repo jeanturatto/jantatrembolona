@@ -10,6 +10,7 @@ import { EditEventModal } from '../components/EditEventModal';
 import { RatingModal } from '../components/RatingModal';
 import { PaymentModal } from '../components/PaymentModal';
 import { ConfirmacaoModal } from '../components/ConfirmacaoModal';
+import { PaymentPromptModal } from '../components/PaymentPromptModal';
 
 // Regra: o prazo de confirmação encerra no DIA ANTERIOR à janta às 16:00 BRT.
 const isEventPastDeadline = (eventDateStr) => {
@@ -56,6 +57,9 @@ export default function DashboardPage() {
   const [pendingPaymentEvent, setPendingPaymentEvent] = useState(null);
   const [paymentModalEvent, setPaymentModalEvent] = useState(null);
   const [confirmacaoEvent, setConfirmacaoEvent] = useState(null);
+  // Payment prompt
+  const [paymentPromptEvent, setPaymentPromptEvent] = useState(null);
+  const [shownPaymentPrompts, setShownPaymentPrompts] = useState(new Set());
   // Ranking
   const [activeTab, setActiveTab] = useState('Abertas');
   const [ranking, setRanking] = useState([]);
@@ -192,6 +196,8 @@ export default function DashboardPage() {
             status: j.status,
             responsiveisNomes: responsiveisNomes || 'Nenhum responsável',
             responsibles: j.responsibles || [],
+            payment_sent: j.payment_sent || false,
+            payment_value: j.payment_value || null,
             attendees: presentes.length,
             // Lista com nome, avatar e inicial dos primeiros 3 presentes
             attendeesList: presentes.slice(0, 3).map(a => ({
@@ -355,6 +361,33 @@ export default function DashboardPage() {
     setIsJustModalOpen(false);
     setJustEventId(null);
   };
+
+  const handleMarkPaymentAsSent = async (eventId) => {
+    try {
+      await supabase.from('events').update({ payment_sent: true }).eq('id', eventId);
+      await fetchDashboardData();
+    } catch (err) {
+      console.error('Erro ao marcar cobrança como enviada:', err);
+    }
+  };
+
+  // Check for payment prompts when jantas change
+  useEffect(() => {
+    if (!jantas.length || !user?.id) return;
+    
+    const recentlyFinalized = jantas.find(j => 
+      j.status === 'Finalizado' && 
+      j.responsibles.includes(user.id) &&
+      !j.payment_sent &&
+      !j.payment_value &&
+      !shownPaymentPrompts.has(j.id)
+    );
+
+    if (recentlyFinalized) {
+      setPaymentPromptEvent(recentlyFinalized);
+      setShownPaymentPrompts(prev => new Set([...prev, recentlyFinalized.id]));
+    }
+  }, [jantas, user?.id, shownPaymentPrompts]);
 
   const proximaJanta = jantas.find(j => j.status === 'Aberto');
   const pastDeadline = proximaJanta ? isEventPastDeadline(proximaJanta.rawDate) : false;
@@ -749,6 +782,13 @@ export default function DashboardPage() {
         isOpen={!!confirmacaoEvent}
         onClose={() => setConfirmacaoEvent(null)}
         event={confirmacaoEvent}
+      />
+      <PaymentPromptModal
+        isOpen={!!paymentPromptEvent}
+        event={paymentPromptEvent}
+        onClose={() => setPaymentPromptEvent(null)}
+        onGeneratePayment={(event) => setPaymentModalEvent(event)}
+        onMarkAsSent={handleMarkPaymentAsSent}
       />
     </div>
   );
