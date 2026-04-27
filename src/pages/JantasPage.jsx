@@ -125,7 +125,8 @@ export default function JantasPage() {
             attendees: presentes.length,
             allAttendeesList: presentes.map(a => ({
               id: a.user_id,
-              name: profileMap[a.user_id]?.name || 'U',
+              name: (profileMap[a.user_id]?.name || 'U').split(' ')[0],
+              fullName: profileMap[a.user_id]?.name || 'U',
               avatar_url: profileMap[a.user_id]?.avatar_url || null,
               initial: (profileMap[a.user_id]?.name || 'U').charAt(0).toUpperCase(),
             })),

@@ -195,18 +195,21 @@ export default function DashboardPage() {
             attendees: presentes.length,
             // Lista com nome, avatar e inicial dos primeiros 3 presentes
             attendeesList: presentes.slice(0, 3).map(a => ({
-              name: profileMap[a.user_id]?.name || 'U',
+              name: (profileMap[a.user_id]?.name || 'U').split(' ')[0],
+              fullName: profileMap[a.user_id]?.name || 'U',
               avatar_url: profileMap[a.user_id]?.avatar_url || null,
               initial: (profileMap[a.user_id]?.name || 'U').charAt(0).toUpperCase(),
             })),
             allAttendeesList: presentes.map(a => ({
               id: a.user_id,
-              name: profileMap[a.user_id]?.name || 'U',
+              name: (profileMap[a.user_id]?.name || 'U').split(' ')[0],
+              fullName: profileMap[a.user_id]?.name || 'U',
               avatar_url: profileMap[a.user_id]?.avatar_url || null,
               initial: (profileMap[a.user_id]?.name || 'U').charAt(0).toUpperCase(),
             })),
             responsiblesList: (j.responsibles || []).map(id => ({
-              name: profileMap[id]?.name || 'U',
+              name: (profileMap[id]?.name || 'U').split(' ')[0],
+              fullName: profileMap[id]?.name || 'U',
               avatar_url: profileMap[id]?.avatar_url || null,
               initial: (profileMap[id]?.name || 'U').charAt(0).toUpperCase(),
             })),
@@ -520,7 +523,7 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-2">
                   <div className="flex -space-x-1.5 items-center">
                      {janta.responsiblesList?.length > 0 ? janta.responsiblesList.slice(0, 2).map((resp, i) => (
-                       <div key={i} title={resp.name} className="w-6 h-6 rounded-full border-2 border-white dark:border-zinc-900 bg-blue-100 dark:bg-blue-900/40 overflow-hidden ring-1 ring-zinc-100 dark:ring-zinc-700 text-[9px] font-bold text-blue-700 dark:text-blue-300 flex items-center justify-center">
+                       <div key={i} title={resp.fullName} className="w-6 h-6 rounded-full border-2 border-white dark:border-zinc-900 bg-blue-100 dark:bg-blue-900/40 overflow-hidden ring-1 ring-zinc-100 dark:ring-zinc-700 text-[9px] font-bold text-blue-700 dark:text-blue-300 flex items-center justify-center">
                          {resp.avatar_url
                            ? <img src={resp.avatar_url} alt={resp.initial} className="w-full h-full object-cover" />
                            : resp.initial}
@@ -543,10 +546,10 @@ export default function DashboardPage() {
                   <span className="text-[8px] font-extrabold text-zinc-400 uppercase tracking-widest mb-1 block">Participantes</span>
                   <div className="flex -space-x-1.5 items-center">
                     {janta.attendees > 0 ? janta.attendeesList.map((att, i) => (
-                       <div key={i} title={att.name} className="w-6 h-6 rounded-full border-2 border-white dark:border-zinc-900 bg-green-100 dark:bg-green-900/40 overflow-hidden ring-1 ring-zinc-100 dark:ring-zinc-700 text-[9px] font-bold text-green-700 dark:text-green-300 flex items-center justify-center cursor-help">
+                       <div key={i} title={att.fullName} className="w-6 h-6 rounded-full border-2 border-white dark:border-zinc-900 bg-green-100 dark:bg-green-900/40 overflow-hidden ring-1 ring-zinc-100 dark:ring-zinc-700 text-[9px] font-bold text-green-700 dark:text-green-300 flex items-center justify-center cursor-help">
                          {att.avatar_url
-                           ? <img src={att.avatar_url} alt={att.initial} className="w-full h-full object-cover" />
-                           : att.initial}
+                           ? <img src={att.avatar_url} alt={att.name} className="w-full h-full object-cover" />
+                           : att.name}
                        </div>
                     )) : (
                        <span className="text-xs text-zinc-400 font-medium">Nenhum</span>

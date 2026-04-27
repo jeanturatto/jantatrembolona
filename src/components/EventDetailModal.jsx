@@ -169,18 +169,20 @@ export const EventDetailModal = ({
             
             {showAttendeesList && event.allAttendeesList && event.allAttendeesList.length > 0 && (
               <div className="mt-2 space-y-1.5 border-t border-zinc-200 dark:border-zinc-700 pt-2 animate-in slide-in-from-top-2 fade-in duration-200">
-                {event.allAttendeesList.map((att, idx) => (
+                {event.allAttendeesList.map((att, idx) => {
+                  const firstName = (att.fullName || att.name || '').split(' ')[0];
+                  return (
                   <div key={idx} className="flex items-center gap-2 p-1.5 bg-white dark:bg-zinc-900/50 rounded-lg border border-zinc-100 dark:border-zinc-800/50">
-                      <div className="w-6 h-6 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center text-[10px] font-bold text-green-600 dark:text-green-300 shrink-0 overflow-hidden" title={att.name}>
+                      <div className="w-6 h-6 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center text-[10px] font-bold text-green-600 dark:text-green-300 shrink-0 overflow-hidden" title={att.fullName || att.name}>
                         {att.avatar_url ? (
-                          <img src={att.avatar_url} alt={att.name} className="w-full h-full object-cover" />
+                          <img src={att.avatar_url} alt={firstName} className="w-full h-full object-cover" />
                         ) : (
-                          att.initial || att.name.charAt(0).toUpperCase()
+                          firstName.charAt(0).toUpperCase()
                         )}
                       </div>
-                    <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200 capitalize truncate">{att.name}</span>
+                    <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200 capitalize truncate">{att.fullName || att.name}</span>
                   </div>
-                ))}
+                )})}
               </div>
             )}
           </div>
