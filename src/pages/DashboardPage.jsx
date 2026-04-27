@@ -153,29 +153,7 @@ export default function DashboardPage() {
         setPendingRatingEvent(null);
       }
 
-      // ── Modal de pagamento para responsáveis
-      // Aparece automaticamente para responsaveis de jantas finalizadas sem payment_value
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      const pendingPayment = (finishedEvents || [])
-        .find(e =>
-          (e.responsibles || []).includes(user.id) &&
-          !e.payment_value &&
-          new Date(e.date) <= yesterday
-        );
-      if (pendingPayment) {
-        setPendingPaymentEvent({
-          id: pendingPayment.id,
-          name: pendingPayment.name || 'Janta',
-          date: new Date(pendingPayment.date).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }),
-          dateFormatted: new Date(pendingPayment.date).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }),
-          rawLocation: pendingPayment.location,
-          responsibles: pendingPayment.responsibles || [],
-          payment_value: pendingPayment.payment_value || null,
-        });
-      } else {
-        setPendingPaymentEvent(null);
-      }
+      
 
       if (jantasData) {
         const profileMap = Object.fromEntries(
@@ -386,22 +364,32 @@ export default function DashboardPage() {
   };
 
   // Check for payment prompts when jantas change
+  // Só mostra popup se: usuario é responsáveis E ainda não gerou cobrança E não foi marcada como enviada
+  // Se usuario clicar "Agora não", não mostra mais nessa sessão
   useEffect(() => {
     if (!jantas.length || !user?.id) return;
     
-    const recentlyFinalized = jantas.find(j => 
+    const pendingPayment = jantas.find(j => 
       j.status === 'Finalizado' && 
       j.responsibles.includes(user.id) &&
-      !j.payment_sent &&
       !j.payment_value &&
+      !j.payment_sent &&
       !shownPaymentPrompts.has(j.id)
     );
 
-    if (recentlyFinalized) {
-      setPaymentPromptEvent(recentlyFinalized);
-      setShownPaymentPrompts(prev => new Set([...prev, recentlyFinalized.id]));
+    if (pendingPayment) {
+      setPaymentPromptEvent(pendingPayment);
+      setShownPaymentPrompts(prev => new Set([...prev, pendingPayment.id]));
     }
   }, [jantas, user?.id, shownPaymentPrompts]);
+
+  // Quando usuario fecha o popup com "Agora não", marca para não mostrar mais nesta sessão
+  const handlePaymentPromptClose = () => {
+    if (paymentPromptEvent) {
+      setShownPaymentPrompts(prev => new Set([...prev, paymentPromptEvent.id]));
+    }
+    setPaymentPromptEvent(null);
+  };
 
   const proximaJanta = jantas.find(j => j.status === 'Aberto');
   const pastDeadline = proximaJanta ? isEventPastDeadline(proximaJanta.rawDate) : false;
@@ -795,8 +783,8 @@ export default function DashboardPage() {
       <PaymentPromptModal
         isOpen={!!paymentPromptEvent}
         event={paymentPromptEvent}
-        onClose={() => setPaymentPromptEvent(null)}
-        onGeneratePayment={(event) => setPaymentModalEvent(event)}
+        onClose={handlePaymentPromptClose}
+        onGeneratePayment={(event) => { setPaymentModalEvent(event); setPaymentPromptEvent(null); }}
         onMarkAsSent={handleMarkPaymentAsSent}
       />
     </div>
