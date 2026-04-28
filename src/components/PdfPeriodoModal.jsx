@@ -72,7 +72,7 @@ export const PdfPeriodoModal = ({ isOpen, onClose, onConfirm }) => {
               onClick={() => setReportType('valores')} 
               className={`flex-1 flex items-center justify-center gap-2 ${btnBase} ${reportType === 'valores' ? btnActive : btnInactive}`}
             >
-              <DollarShare size={14} /> Valores
+              <DollarSign size={14} /> Valores
             </button>
           </div>
         </div>
