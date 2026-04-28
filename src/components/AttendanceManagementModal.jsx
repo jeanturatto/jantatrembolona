@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Plus, Minus, CheckCircle, XCircle, AlertCircle, UserPlus } from 'lucide-react';
+import { Users, Plus, Minus, CheckCircle, XCircle, AlertCircle, UserPlus, X } from 'lucide-react';
 import { Modal } from './Modal';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -16,6 +16,9 @@ export const AttendanceManagementModal = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [allProfiles, setAllProfiles] = useState([]);
   const [selectedProfiles, setSelectedProfiles] = useState(new Set());
+  const [guests, setGuests] = useState([]);
+  const [newGuestName, setNewGuestName] = useState('');
+  const [guestsLoading, setGuestsLoading] = useState(false);
 
   // Busca participantes e todos os perfis ao abrir
   useEffect(() => {
@@ -66,6 +69,14 @@ export const AttendanceManagementModal = ({
     };
 
     fetchData();
+  }, [isOpen, event?.id]);
+
+  // Sync guests from event prop
+  useEffect(() => {
+    if (isOpen && event?.guests !== undefined) {
+      setGuests(Array.isArray(event.guests) ? event.guests : []);
+      setNewGuestName('');
+    }
   }, [isOpen, event?.id]);
 
   const handleAddParticipant = async (userId) => {
@@ -145,6 +156,36 @@ export const AttendanceManagementModal = ({
       console.error('Erro ao atualizar status:', err);
       alert('Erro ao atualizar status: ' + (err.message || 'Erro desconhecido'));
     }
+  };
+
+  const saveGuests = async (updatedGuests) => {
+    setGuestsLoading(true);
+    try {
+      const { error } = await supabase
+        .from('events')
+        .update({ guests: updatedGuests })
+        .eq('id', event.id);
+      if (error) throw error;
+      setGuests(updatedGuests);
+      onSuccess?.();
+    } catch (err) {
+      alert('Erro ao salvar convidados: ' + (err.message || 'Erro desconhecido.'));
+    } finally {
+      setGuestsLoading(false);
+    }
+  };
+
+  const handleAddGuest = async () => {
+    const name = newGuestName.trim();
+    if (!name) return;
+    const updated = [...guests, name];
+    setNewGuestName('');
+    await saveGuests(updated);
+  };
+
+  const handleRemoveGuest = async (idx) => {
+    const updated = guests.filter((_, i) => i !== idx);
+    await saveGuests(updated);
   };
 
   const filteredProfiles = allProfiles.filter(profile =>
@@ -267,6 +308,55 @@ export const AttendanceManagementModal = ({
                 )
               )}
             </div>
+          </div>
+
+          {/* Convidados */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Users size={16} className="text-zinc-400" />
+              <h3 className="text-sm font-bold text-zinc-900 dark:text-white">Convidados ({guests.length})</h3>
+            </div>
+            
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newGuestName}
+                onChange={(e) => setNewGuestName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAddGuest()}
+                placeholder="Nome do convidado..."
+                className="flex-1 px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm focus:outline-none focus:border-[#2842B5] dark:focus:border-white"
+              />
+              <button
+                onClick={handleAddGuest}
+                disabled={guestsLoading || !newGuestName.trim()}
+                className="px-3 py-2 bg-[#2842B5] hover:bg-[#3452c5] disabled:opacity-50 text-white rounded-lg font-bold text-sm transition-all"
+              >
+                <Plus size={16} />
+              </button>
+            </div>
+
+            {guests.length > 0 ? (
+              <div className="space-y-1 max-h-40 overflow-y-auto">
+                {guests.map((guest, idx) => (
+                  <div 
+                    key={idx}
+                    className="flex items-center justify-between p-3 bg-white dark:bg-zinc-800/50 rounded-lg border border-zinc-100 dark:border-zinc-800/50"
+                  >
+                    <span className="text-sm font-medium text-zinc-900 dark:text-white">{guest}</span>
+                    <button
+                      onClick={() => handleRemoveGuest(idx)}
+                      disabled={guestsLoading}
+                      className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors disabled:opacity-50"
+                      title="Remover convidado"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-zinc-400 italic">Nenhum convidado adicionado.</p>
+            )}
           </div>
 
           {/* Botões de Ação */}
