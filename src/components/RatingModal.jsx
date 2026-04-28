@@ -12,6 +12,13 @@ export const RatingModal = ({ isOpen, onClose, event, onSubmit, loading, unclosa
 
   if (!event) return null;
 
+  const handleClose = () => {
+    setStars(0);
+    setHovered(0);
+    setComment('');
+    onClose?.();
+  };
+
   const handleSkip = async () => {
     if (userId) {
       const skippedKey = `rating_skipped_${event.id}_${userId}`;
@@ -38,7 +45,6 @@ export const RatingModal = ({ isOpen, onClose, event, onSubmit, loading, unclosa
   };
 
   const active = hovered || stars;
-  const eventDate = event.rawDate ? new Date(event.rawDate).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }) : (event.dateFormatted || event.date);
 
   return (
     <Modal isOpen={isOpen} onClose={unclosable ? undefined : handleClose} title="Avaliar Janta">
@@ -102,14 +108,13 @@ export const RatingModal = ({ isOpen, onClose, event, onSubmit, loading, unclosa
         </p>
 
         <div className="flex gap-3">
-          {!unclosable && (
-            <button
-              onClick={handleSkip}
-              className="flex-1 py-3 border border-zinc-200 dark:border-white/[0.09] text-zinc-500 dark:text-zinc-400 rounded-xl font-semibold text-sm hover:bg-zinc-50 dark:hover:bg-white/[0.03] transition-colors"
-            >
-              Ignorar
-            </button>
-          )}
+          {/* Botão Ignorar - SEMPRE visível */}
+          <button
+            onClick={handleSkip}
+            className="flex-1 py-3 border border-zinc-200 dark:border-white/[0.09] text-zinc-500 dark:text-zinc-400 rounded-xl font-semibold text-sm hover:bg-zinc-50 dark:hover:bg-white/[0.03] transition-colors"
+          >
+            Ignorar
+          </button>
           <button
             onClick={handleSubmit}
             disabled={stars === 0 || loading}
