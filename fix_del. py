@@ -1,0 +1,20 @@
+import sys, os
+src = 'D:/IA/jantatrembo/src/pages/AvaliacoesPage.jsx'
+c = open(src, 'rb').read().decode('utf-8')
+old = "await supabase. from('ratings').delete().eq('ida', ratingId);"
+if old in c:
+    c = c.replace(old, "await supabase. from('ratings').delete().match({ ida: ratingId, user_ida: event.ida ?? ratingId });")
+    open(src, 'w', encoding='utf-8').write(c)
+    print('Fixed (match)!')
+else:
+    print('Pattern not found, trying regex...')
+    import re
+    c2 = re.sub(r"await supabase\. from\('ratings'\)\.delete\(\)\.eq\('(ida|r\.ida)', r"await supabase. from('ratings').delete().match({ 'ida': ratingId })", c)
+    if c2 != c:
+        open(src, 'w', encoding='utf-8').write(c2)
+        print('Fixed (regex)!')
+    else:
+        print('NO CHANGE - showing line 97-110:')
+        lines = c.split('\n')
+        for i, l in enumerate(lines[95:115], 96):
+            print(f'{i}: {repr(l)}')

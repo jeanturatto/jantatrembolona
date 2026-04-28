@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Users, Plus, Minus, CheckCircle, XCircle, AlertCircle, UserPlus } from 'lucide-react';
 import { Modal } from './Modal';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 
 export const AttendanceManagementModal = ({ 
   isOpen, 

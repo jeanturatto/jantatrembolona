@@ -11,6 +11,7 @@ import { RatingModal } from '../components/RatingModal';
 import { PaymentModal } from '../components/PaymentModal';
 import { ConfirmacaoModal } from '../components/ConfirmacaoModal';
 import { PaymentPromptModal } from '../components/PaymentPromptModal';
+import { AttendanceManagementModal } from '../components/AttendanceManagementModal';
 
 // Regra: o prazo de confirmação encerra no DIA ANTERIOR à janta às 16:00 BRT.
 const isEventPastDeadline = (eventDateStr) => {
@@ -36,7 +37,7 @@ const isEventPastDeadline = (eventDateStr) => {
 };
 
 export default function DashboardPage() {
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, signOut, isAdmin } = useAuth();
   const [jantas, setJantas] = useState([]);
   const [stats, setStats] = useState({ totalJantas: 0, membros: 0, presencaMedia: '0%', inadimplentes: 0 });
   const [loading, setLoading] = useState(true);
@@ -60,6 +61,7 @@ export default function DashboardPage() {
   // Payment prompt
   const [paymentPromptEvent, setPaymentPromptEvent] = useState(null);
   const [paymentPromptChecked, setPaymentPromptChecked] = useState(false);
+  const [attendanceManagementEvent, setAttendanceManagementEvent] = useState(null);
   const [shownPaymentPrompts, setShownPaymentPrompts] = useState(() => {
     try {
       const saved = localStorage.getItem('shownPaymentPrompts');
@@ -145,6 +147,7 @@ export default function DashboardPage() {
         .map(j => {
           const userAtt = j.attendances?.find(a => a.user_id === user.id);
           const userStatus = userAtt ? userAtt.status : null;
+          const isAfterUserJoined = !userCreatedAt || new Date(j.date) >= new Date(userCreatedAt);
           return {
             event: j,
             userStatus: userStatus,
@@ -152,14 +155,13 @@ export default function DashboardPage() {
             rawLocation: j.location,
             location: j.location,
             status: j.status,
-            responsiveisNomes: responsiveisNomes || 'Nenhum responsável',
             responsibles: j.responsibles || [],
             payment_sent: j.payment_sent || false,
             payment_value: j.payment_value || null,
-            canRate: isAfterUserJoined && (userAtt?.status === 'Presente' || userAtt?.status === 'Confirmado'),
+            canRate: isAfterUserJoined && (userAtt?.status === 'Presente' || userAtt?.status === 'Ausente'),
           };
         })
-        .filter(({ userStatus }) => (userStatus === 'Presente' || userStatus === 'Confirmado'))
+        .filter(({ userStatus }) => (userStatus === 'Presente' || userStatus === 'Ausente'))
         .filter(({ event }) => !ratedEventIds.has(event.id));
       
       const pendingRating = myAttendedInFinished
@@ -196,13 +198,11 @@ export default function DashboardPage() {
           const presentes = j.attendances?.filter(a => a.status === 'Presente') || [];
           const userAtt = j.attendances?.find(a => a.user_id === user.id);
           const userStatus = userAtt ? userAtt.status : null;
-          const responsiveisNomes = (j.responsibles || []).map(id => profileMap[id]).filter(Boolean).join(', ');
           const eventDate = new Date(j.date);
           const isAfterUserJoined = !userCreatedAt || new Date(j.date) >= new Date(userCreatedAt);
           return {
             id: j.id,
             name: j.name || 'Janta das Quintas',
-            userStatus: userStatus,
             date: eventDate.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }),
             dateFormatted: eventDate.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }),
             dayText: eventDate.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '').toUpperCase(),
@@ -214,13 +214,11 @@ export default function DashboardPage() {
             rawLocation: j.location,
             location: j.location,
             status: j.status,
-            responsiveisNomes: responsiveisNomes || 'Nenhum responsável',
             responsibles: j.responsibles || [],
             payment_sent: j.payment_sent || false,
             payment_value: j.payment_value || null,
-            canRate: isAfterUserJoined && (userAtt?.status === 'Presente' || userAtt?.status === 'Confirmado'),
+            canRate: isAfterUserJoined && (userAtt?.status === 'Presente' || userAtt?.status === 'Ausente'),
             attendees: presentes.length,
-            // Lista com nome, avatar e inicial dos primeiros 3 presentes
             attendeesList: presentes.slice(0, 3).map(a => ({
               name: (profileMap[a.user_id]?.name || 'U').split(' ')[0],
               fullName: profileMap[a.user_id]?.name || 'U',
@@ -786,6 +784,7 @@ export default function DashboardPage() {
         onPaymentClick={setPaymentModalEvent}
         onConfirmacaoClick={setConfirmacaoEvent}
         onEventUpdate={fetchDashboardData}
+        onAttendanceManagementClick={setAttendanceManagementEvent}
       />
 
       <EditEventModal
@@ -836,6 +835,12 @@ export default function DashboardPage() {
           setPaymentPromptEvent(null); 
         }}
         onMarkAsSent={handleMarkPaymentAsSent}
+      />
+      <AttendanceManagementModal
+        isOpen={!!attendanceManagementEvent}
+        onClose={() => setAttendanceManagementEvent(null)}
+        event={attendanceManagementEvent}
+        onSuccess={() => { fetchDashboardData(); setAttendanceManagementEvent(null); }}
       />
     </div>
   );

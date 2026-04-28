@@ -53,7 +53,7 @@ export const PendingRatingsModal = ({ isOpen, onClose, onAllRated, user }) => {
           const userAtt = j.attendances?.find(a => a.user_id === user.id);
           return { ...j, userStatus: userAtt?.status };
         })
-        .filter(j => j.userStatus === 'Presente' || j.userStatus === 'Confirmado')
+        .filter(j => j.userStatus === 'Presente' || j.userStatus === 'Ausente')
         .filter(j => !ratedIds.has(j.id));
 
       setPendingEvents(pending);

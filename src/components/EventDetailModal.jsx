@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { MapPin, Calendar, Users, Utensils, CheckCircle2, XCircle, AlertCircle, Lock, Edit3, UserPlus, X, Plus, MessageSquare, ChevronDown } from 'lucide-react';
+import { MapPin, Calendar, Users, Utensils, CheckCircle2, XCircle, AlertCircle, Lock, Edit3, UserPlus, X, Plus, MessageSquare, ChevronDown, UserPlus as AddUser } from 'lucide-react';
 import { Modal } from './Modal';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -27,6 +27,7 @@ export const EventDetailModal = ({
   onPaymentClick,
   onConfirmacaoClick,
   onEventUpdate,
+  onAttendanceManagementClick,
 }) => {
   const { user, isAdmin } = useAuth();
   const [responsaveis, setResponsaveis] = useState([]);
@@ -333,6 +334,14 @@ export const EventDetailModal = ({
                className="flex-1 py-2 px-3 border border-emerald-200 text-emerald-600 bg-emerald-50 dark:bg-emerald-900/10 dark:border-emerald-800/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/20 rounded-xl font-bold text-xs transition-colors flex items-center justify-center gap-2"
             >
               <span className="text-base">💰</span> Cobrança
+            </button>
+          )}
+          {event.status === 'Finalizado' && isAdmin && onAttendanceManagementClick && (
+            <button
+              onClick={() => { onAttendanceManagementClick(event); onClose(); }}
+              className="flex-1 py-2 px-3 border border-violet-200 text-violet-600 bg-violet-50 dark:bg-violet-900/10 dark:border-violet-800/40 hover:bg-violet-100 dark:hover:bg-violet-900/20 rounded-xl font-bold text-xs transition-colors flex items-center justify-center gap-2"
+            >
+              <Users size={14} /> Gerenciar Presenças
             </button>
           )}
           {pastDeadline && (isUserResponsible || isAdmin) && onConfirmacaoClick && (

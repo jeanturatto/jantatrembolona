@@ -1,0 +1,10 @@
+import os
+src = r'D:\IA\jantatrembo\src\pages\AvaliacoesPage. jsx'
+c = open(src, 'r', encoding='utf-8').read()
+old = "await supabase. from('ratings').delete().eq('id', ratingId);"
+if old in c:
+    c = c.replace(old, "await supabase. from('ratings').delete().eq('id', ratingId).eq('event_id', eventId);")
+    open(src, 'w', encoding='utf-8').write(c)
+    print('Fixed!')
+else:
+    print('OLD PATTERN NOT FOUND')
