@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import { Star } from 'lucide-react';
 import { Modal } from './Modal';
-import { supabase } from '../lib/supabase';
 
 const LABELS = ['', 'Fraco 😬', 'Regular 😐', 'Bom 👍', 'Muito bom! 😄', 'Incrível! 🏆'];
 
-export const RatingModal = ({ isOpen, onClose, event, onSubmit, loading, unclosable, userId }) => {
+export const RatingModal = ({ isOpen, onClose, onIgnore, event, onSubmit, loading, unclosable, userId }) => {
   const [stars, setStars] = useState(0);
   const [hovered, setHovered] = useState(0);
   const [comment, setComment] = useState('');
@@ -19,24 +18,15 @@ export const RatingModal = ({ isOpen, onClose, event, onSubmit, loading, unclosa
     onClose?.();
   };
 
-  const handleSkip = async () => {
-    if (userId) {
-      const skippedKey = `rating_skipped_${event.id}_${userId}`;
-      localStorage.setItem(skippedKey, 'true');
-      try {
-        await supabase.from('ratings').insert({
-          event_id: event.id,
-          user_id: userId,
-          stars: 0,
-          comment: '',
-          ignored_at: new Date().toISOString()
-        });
-      } catch (e) {}
-    }
+  const handleIgnore = () => {
     setStars(0);
     setHovered(0);
     setComment('');
-    onClose?.();
+    if (onIgnore) {
+      onIgnore();
+    } else {
+      onClose?.();
+    }
   };
 
   const handleSubmit = () => {
@@ -108,12 +98,12 @@ export const RatingModal = ({ isOpen, onClose, event, onSubmit, loading, unclosa
         </p>
 
         <div className="flex gap-3">
-          {/* Botão Ignorar - SEMPRE visível */}
+          {/* Botão Ignorar - sempre fecha o modal para reaparecer depois */}
           <button
-            onClick={handleSkip}
+            onClick={handleIgnore}
             className="flex-1 py-3 border border-zinc-200 dark:border-white/[0.09] text-zinc-500 dark:text-zinc-400 rounded-xl font-semibold text-sm hover:bg-zinc-50 dark:hover:bg-white/[0.03] transition-colors"
           >
-            Ignorar
+            Ignorar desta vez
           </button>
           <button
             onClick={handleSubmit}

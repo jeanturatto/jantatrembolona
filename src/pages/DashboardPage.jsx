@@ -804,6 +804,7 @@ export default function DashboardPage() {
           }
           setRatingEvent(null);
         }}
+        onIgnore={() => setRatingEvent(null)}
         event={ratingEvent}
         onSubmit={handleRatingSubmit}
         loading={ratingLoading}

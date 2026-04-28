@@ -91,15 +91,10 @@ export default function LoginPage() {
         const { data: ratings } = await supabase
           .from('ratings')
           .select('event_id')
-          .eq('user_id', loggedUser.id);
+          .eq('user_id', loggedUser.id)
+          .gt('stars', 0);
 
         const ratedIds = new Set((ratings || []).map(r => r.event_id));
-        
-        // Also check localStorage for skipped ratings
-        const skippedKeys = Object.keys(localStorage).filter(k => 
-          k.startsWith('rating_skipped_') && k.endsWith(`_${loggedUser.id}`)
-        );
-        const locallySkippedIds = new Set(skippedKeys.map(k => k.split('_')[2]));
 
         const { data: events } = await supabase
           .from('events')
@@ -115,7 +110,7 @@ export default function LoginPage() {
             return { ...j, userStatus: userAtt?.status };
           })
           .filter(j => j.userStatus === 'Presente' || j.userStatus === 'Ausente')
-          .filter(j => !ratedIds.has(j.id) && !locallySkippedIds.has(j.id));
+          .filter(j => !ratedIds.has(j.id));
 
         if (pending.length > 0) {
           setPendingUser(loggedUser);

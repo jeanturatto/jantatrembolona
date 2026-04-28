@@ -578,6 +578,7 @@ export default function JantasPage() {
       <RatingModal
         isOpen={!!ratingEvent}
         onClose={() => setRatingEvent(null)}
+        onIgnore={() => setRatingEvent(null)}
         event={ratingEvent}
         onSubmit={handleRatingSubmit}
         loading={ratingLoading}
