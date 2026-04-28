@@ -33,12 +33,21 @@ export const PendingRatingsModal = ({ isOpen, onClose, onAllRated, user }) => {
 
       const userCreatedAt = userProfile?.created_at;
 
+      // Get all ratings including ignored ones
       const { data: ratings } = await supabase
         .from('ratings')
-        .select('event_id')
+        .select('event_id, stars, ignored_at')
         .eq('user_id', user.id);
 
-      const ratedIds = new Set((ratings || []).map(r => r.event_id));
+      const ratedIds = new Set((ratings || [])
+        .filter(r => (r.stars && r.stars > 0) || r.ignored_at)
+        .map(r => r.event_id));
+      
+      // Also check localStorage for skipped ratings
+      const skippedKeys = Object.keys(localStorage).filter(k => 
+        k.startsWith('rating_skipped_') && k.endsWith(`_${user.id}`)
+      );
+      const locallySkippedIds = new Set(skippedKeys.map(k => k.split('_')[2]));
 
       const { data: events } = await supabase
         .from('events')
@@ -54,7 +63,7 @@ export const PendingRatingsModal = ({ isOpen, onClose, onAllRated, user }) => {
           return { ...j, userStatus: userAtt?.status };
         })
         .filter(j => j.userStatus === 'Presente' || j.userStatus === 'Ausente')
-        .filter(j => !ratedIds.has(j.id));
+        .filter(j => !ratedIds.has(j.id) && !locallySkippedIds.has(j.id));
 
       setPendingEvents(pending);
       setCurrentIndex(0);
@@ -71,8 +80,26 @@ export const PendingRatingsModal = ({ isOpen, onClose, onAllRated, user }) => {
   const currentEvent = pendingEvents[currentIndex];
   const active = hovered || stars;
 
-  const handleSkip = () => {
+  const handleSkip = async () => {
     const isLast = currentIndex >= pendingEvents.length - 1;
+    
+    // Save to localStorage for persistence across logins
+    const skippedKey = `rating_skipped_${currentEvent.id}_${user.id}`;
+    localStorage.setItem(skippedKey, 'true');
+    
+    // Also save to database (optional - will be used if we add ignored_at column)
+    try {
+      await supabase.from('ratings').insert({
+        event_id: currentEvent.id,
+        user_id: user.id,
+        stars: 0,
+        comment: '',
+        ignored_at: new Date().toISOString()
+      });
+    } catch (e) {
+      // Ignore if column doesn't exist yet
+    }
+    
     if (isLast) {
       onAllRated?.();
       onClose();

@@ -808,6 +808,7 @@ export default function DashboardPage() {
         onSubmit={handleRatingSubmit}
         loading={ratingLoading}
         unclosable={!!(pendingRatingEvent && ratingEvent?.id === pendingRatingEvent.id)}
+        userId={user?.id}
       />
       {/* Modal de pagamento: SÓ abre quando usuario clicar em Gerar Cobrança */}
       <PaymentModal

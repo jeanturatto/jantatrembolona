@@ -581,6 +581,7 @@ export default function JantasPage() {
         event={ratingEvent}
         onSubmit={handleRatingSubmit}
         loading={ratingLoading}
+        userId={user?.id}
       />
       <ConfirmacaoModal
         isOpen={!!confirmacaoEvent}
