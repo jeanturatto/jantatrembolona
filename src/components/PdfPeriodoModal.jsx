@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Modal } from './Modal';
-import { FileDown } from 'lucide-react';
+import { FileDown, Users, DollarSign } from 'lucide-react';
 
 const MONTHS = [
   'Janeiro','Fevereiro','Março','Abril','Maio','Junho',
@@ -10,7 +10,7 @@ const MONTHS = [
 /**
  * Modal for choosing PDF export period
  * Props: isOpen, onClose, onConfirm(params)
- * params: { type: 'month'|'year'|'range', year, month, startDate, endDate }
+ * params: { type: 'month'|'year'|'range', year, month, startDate, endDate, reportType }
  */
 export const PdfPeriodoModal = ({ isOpen, onClose, onConfirm }) => {
   const now = new Date();
@@ -19,6 +19,7 @@ export const PdfPeriodoModal = ({ isOpen, onClose, onConfirm }) => {
   const [month, setMonth] = useState(now.getMonth());
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [reportType, setReportType] = useState('presencas');
 
   const years = [now.getFullYear() - 1, now.getFullYear()];
 
@@ -26,7 +27,7 @@ export const PdfPeriodoModal = ({ isOpen, onClose, onConfirm }) => {
     if (type === 'range' && (!startDate || !endDate)) {
       alert('Preencha as duas datas.'); return;
     }
-    onConfirm({ type, year, month, startDate, endDate });
+    onConfirm({ type, year, month, startDate, endDate, reportType });
     onClose();
   };
 
@@ -37,6 +38,25 @@ export const PdfPeriodoModal = ({ isOpen, onClose, onConfirm }) => {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Exportar Relatório PDF">
       <div className="space-y-5">
+        {/* Report Type selector */}
+        <div className="space-y-2">
+          <label className="text-[10px] font-bold uppercase text-zinc-400">Tipo de Relatório</label>
+          <div className="flex gap-2">
+            <button 
+              onClick={() => setReportType('presencas')} 
+              className={`flex-1 flex items-center justify-center gap-2 ${btnBase} ${reportType === 'presencas' ? btnActive : btnInactive}`}
+            >
+              <Users size={14} /> Presenças
+            </button>
+            <button 
+              onClick={() => setReportType('valores')} 
+              className={`flex-1 flex items-center justify-center gap-2 ${btnBase} ${reportType === 'valores' ? btnActive : btnInactive}`}
+            >
+              <DollarSign size={14} /> Valores
+            </button>
+          </div>
+        </div>
+
         {/* Type selector */}
         <div className="space-y-2">
           <label className="text-[10px] font-bold uppercase text-zinc-400">Período</label>

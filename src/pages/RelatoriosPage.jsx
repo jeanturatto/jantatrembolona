@@ -133,7 +133,7 @@ export default function RelatoriosPage() {
     if (profile?.id) fetchReports();
   }, [profile?.id, isAdmin, selectedMonth, selectedYear]);
 
-  const handlePdfConfirm = async ({ type, year, month, startDate, endDate }) => {
+  const handlePdfConfirm = async ({ type, year, month, startDate, endDate, reportType = 'presencas' }) => {
     // Determine date range from selected type
     let start, end, title;
     if (type === 'month') {
@@ -150,7 +150,101 @@ export default function RelatoriosPage() {
       title = `Relatório ${startDate} a ${endDate}`;
     }
 
-    // Fetch data for the selected period
+    if (reportType === 'valores') {
+      // Fetch events with payment data
+      const { data: events } = await supabase
+        .from('events')
+        .select('id, date, name, responsibles, payment_value, guests')
+        .gte('date', start)
+        .lte('date', end)
+        .order('date');
+
+      // Get all responsible user IDs
+      const allRespIds = [...new Set(events?.flatMap(e => e.responsibles || []) || [])];
+      let respNames = {};
+      if (allRespIds.length > 0) {
+        const { data: profiles } = await supabase.from('profiles').select('id, name').in('id', allRespIds);
+        respNames = Object.fromEntries((profiles || []).map(p => [p.id, p.name]));
+      }
+
+      // Get attendances for presence count
+      const { data: atts } = await supabase
+        .from('attendances')
+        .select('event_id, user_id, status')
+        .in('event_id', events?.map(e => e.id) || []);
+
+      const rows = (events || []).map(e => {
+        const presentes = atts?.filter(a => a.event_id === e.id && a.status === 'Presente').length || 0;
+        const guests = Array.isArray(e.guests) ? e.guests.length : 0;
+        const totalPessoas = presentes + guests;
+        const valor = parseFloat(e.payment_value) || 0;
+        const rateio = totalPessoas > 0 ? Math.ceil(valor / totalPessoas) : 0;
+        const responsaveis = (e.responsibles || []).map(id => respNames[id] || 'Responsável').join(', ');
+        
+        return `
+          <tr>
+            <td>${new Date(e.date).toLocaleDateString('pt-BR')}</td>
+            <td class="cap">${e.name || 'Janta'}</td>
+            <td style="font-size:10px;color:#666">${responsaveis}</td>
+            <td style="text-align:center;font-weight:700">${totalPessoas}</td>
+            <td style="text-align:right;font-weight:700">${valor > 0 ? 'R$ ' + valor.toFixed(2).replace('.', ',') : '-'}</td>
+            <td style="text-align:right;color:#16a34a;font-weight:700">${rateio > 0 ? 'R$ ' + rateio.toFixed(2).replace('.', ',') : '-'}</td>
+          </tr>`;
+      }).join('');
+
+      const totalValor = events?.reduce((acc, e) => acc + (parseFloat(e.payment_value) || 0), 0) || 0;
+      const eventosComValor = events?.filter(e => e.payment_value).length || 0;
+      const mediaRateio = eventosComValor > 0 
+        ? Math.round(events?.filter(e => e.payment_value).reduce((acc, e) => {
+            const presentes = atts?.filter(a => a.event_id === e.id && a.status === 'Presente').length || 0;
+            const guests = Array.isArray(e.guests) ? e.guests.length : 0;
+            const rateio = (presentes + guests) > 0 ? Math.ceil(parseFloat(e.payment_value) / (presentes + guests)) : 0;
+            return acc + rateio;
+          }, 0) / eventosComValor)
+        : 0;
+
+      const win = window.open('', '_blank');
+      if (!win) {
+        alert('Por favor, permita pop-ups para exportar o PDF.');
+        return;
+      }
+      win.document.write(`<!DOCTYPE html><html><head>
+        <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>${title} - Valores</title>
+        <style>
+          * { box-sizing: border-box; margin: 0; padding: 0; }
+          body { font-family: system-ui, sans-serif; font-size: 12px; color: #111; padding: 24px; }
+          h1 { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+          p.sub { font-size: 11px; color: #666; margin-bottom: 20px; }
+          table { width: 100%; border-collapse: collapse; }
+          th { text-align: left; font-size: 10px; text-transform: uppercase; color: #888; padding: 6px 8px; border-bottom: 2px solid #e5e7eb; }
+          td { padding: 8px; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+          .cap { text-transform: capitalize; }
+          .total { border-top: 2px solid #e5e7eb; font-weight: 700; }
+          .media { color: #16a34a; }
+        </style>
+      </head><body>
+        <h1>${title} - Valores</h1>
+        <p class="sub">${events?.length || 0} jantas &middot; ${eventosComValor} com valor cadastrado</p>
+        <table>
+          <thead><tr>
+            <th>Data</th><th>Janta</th><th>Responsável</th><th style="text-align:center">Pessoas</th><th style="text-align:right">Total</th><th style="text-align:right">Rateio</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+          <tfoot>
+            <tr class="total">
+              <td colspan="4">Média Rateio</td>
+              <td style="text-align:right" class="media">${mediaRateio > 0 ? 'R$ ' + mediaRateio.toFixed(2).replace('.', ',') : '-'}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </body></html>`);
+      win.document.close();
+      win.focus();
+      setTimeout(() => { win.print(); win.close(); }, 400);
+      return;
+    }
+
+    // Fetch data for presenças report (existing code)
     const [eventsRes, profilesRes, attsRes, allJustRes] = await Promise.all([
       supabase.from('events').select('id').gte('date', start).lte('date', end),
       supabase.from('profiles').select('id, name, email, inadimplente').order('name'),
@@ -193,7 +287,7 @@ export default function RelatoriosPage() {
       return;
     }
     win.document.write(`<!DOCTYPE html><html><head>
-      <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>${title}</title>
+      <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>${title} - Presenças</title>
       <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: system-ui, sans-serif; font-size: 12px; color: #111; padding: 24px; }
@@ -209,7 +303,7 @@ export default function RelatoriosPage() {
         .badge-green { background:#dcfce7; color:#16a34a; }
       </style>
     </head><body>
-      <h1>${title}</h1>
+      <h1>${title} - Presenças</h1>
       <p class="sub">${totalJantasPdf} jantas no período &middot; ${profiles.length} membros</p>
       <table>
         <thead><tr>
