@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Card } from '../components/Card';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { ShieldAlert, FileDown } from 'lucide-react';
+import { ShieldAlert, FileDown, DollarSign, Users } from 'lucide-react';
 import { PdfPeriodoModal } from '../components/PdfPeriodoModal';
 import { AdminUserModal } from '../components/AdminUserModal';
 
@@ -22,6 +22,7 @@ export default function RelatoriosPage() {
   const { profile, isAdmin } = useAuth();
   const [loading, setLoading] = useState(true);
   const [membersData, setMembersData] = useState([]);
+  const [jantasData, setJantasData] = useState([]);
   const [totalJantas, setTotalJantas] = useState(0);
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
   const [selectedUserForModal, setSelectedUserForModal] = useState(null);
@@ -39,7 +40,7 @@ export default function RelatoriosPage() {
         const endDate = new Date(selectedYear, selectedMonth + 1, 0, 23, 59, 59).toISOString();
 
         const [eventsRes, profilesRes, monthAttsRes, allAttsRes] = await Promise.all([
-          supabase.from('events').select('id').gte('date', startDate).lte('date', endDate),
+          supabase.from('events').select('id, date, name, responsibles, payment_value, guests').gte('date', startDate).lte('date', endDate),
           supabase.from('profiles').select('id, name, email, avatar_url, inadimplente, role, telefone, pix').order('name'),
           supabase.from('attendances').select('*').gte('created_at', startDate).lte('created_at', endDate),
           // All-time justified to determine "corda bamba"
@@ -88,6 +89,41 @@ export default function RelatoriosPage() {
         }).sort((a, b) => b.perc - a.perc);
 
         setMembersData(data);
+
+        // Process jantas data
+        const events = eventsRes.data || [];
+        const allUserIds = [...new Set(events.flatMap(e => e.responsibles || []))];
+        let profilesMap = {};
+        if (allUserIds.length > 0) {
+          const { data: respProfiles } = await supabase
+            .from('profiles')
+            .select('id, name')
+            .in('id', allUserIds);
+          profilesMap = Object.fromEntries((respProfiles || []).map(p => [p.id, p.name]));
+        }
+
+        const jantas = events.map(e => {
+          const presentesCount = monthAtts.filter(a => a.event_id === e.id && a.status === 'Presente').length;
+          const guestsCount = Array.isArray(e.guests) ? e.guests.length : 0;
+          const totalPessoas = presentesCount + guestsCount;
+          const valor = parseFloat(e.payment_value) || 0;
+          const rateio = totalPessoas > 0 ? Math.ceil(valor / totalPessoas) : 0;
+          const responsaveisNomes = (e.responsibles || []).map(id => profilesMap[id] || 'Responsável').join(', ');
+
+          return {
+            id: e.id,
+            date: e.date,
+            name: e.name,
+            responsaveis: responsaveisNomes,
+            valor,
+            presentesCount,
+            guestsCount,
+            totalPessoas,
+            rateio,
+          };
+        }).sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        setJantasData(jantas);
       } catch (err) {
         console.error(err);
       } finally {
@@ -327,6 +363,77 @@ export default function RelatoriosPage() {
           </table>
         </div>
       </Card>
+
+      {/* Valores das Jantas */}
+      {jantasData.length > 0 && (
+        <Card>
+          <div className="flex items-center gap-2 mb-4">
+            <DollarSign size={18} className="text-green-600" />
+            <h3 className="font-bold">Valores das Jantas</h3>
+          </div>
+          
+          <div className="overflow-x-auto -mx-4 md:mx-0">
+            <table className="w-full text-left text-sm">
+              <thead className="text-zinc-400 font-bold border-b border-zinc-100 dark:border-zinc-800 text-[11px] uppercase tracking-wider">
+                <tr>
+                  <th className="pb-3 pr-4">Data</th>
+                  <th className="pb-3 pr-4 hidden md:table-cell">Responsável</th>
+                  <th className="pb-3 text-center pr-3">Pessoas</th>
+                  <th className="pb-3 text-right pr-3">Total</th>
+                  <th className="pb-3 text-right">Rateio</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-50 dark:divide-zinc-800/50">
+                {jantasData.map((j) => (
+                  <tr key={j.id}>
+                    <td className="py-3 pr-4">
+                      <span className="font-medium text-zinc-900 dark:text-white">
+                        {new Date(j.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+                      </span>
+                    </td>
+                    <td className="py-3 pr-4 hidden md:table-cell text-zinc-600 dark:text-zinc-400 text-xs">
+                      {j.responsaveis || '-'}
+                    </td>
+                    <td className="py-3 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <Users size={12} className="text-blue-500" />
+                        <span className="font-bold text-zinc-900 dark:text-white">{j.totalPessoas}</span>
+                        {j.guestsCount > 0 && (
+                          <span className="text-[10px] text-zinc-400">({j.presentesCount} + {j.guestsCount})</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-3 text-right font-bold text-zinc-900 dark:text-white">
+                      {j.valor > 0 ? `R$ ${j.valor.toFixed(2).replace('.', ',')}` : '-'}
+                    </td>
+                    <td className="py-3 text-right font-bold text-green-600">
+                      {j.rateio > 0 ? `R$ ${j.rateio.toFixed(2).replace('.', ',')}` : '-'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot className="border-t-2 border-zinc-200 dark:border-zinc-700">
+                <tr>
+                  <td colSpan={2} className="pt-3 pr-4 font-bold text-zinc-900 dark:text-white">Média Geral</td>
+                  <td className="pt-3 text-center font-bold text-zinc-900 dark:text-white">
+                    {jantasData.length > 0 ? Math.round(jantasData.reduce((acc, j) => acc + j.totalPessoas, 0) / jantasData.length) : 0}
+                  </td>
+                  <td className="pt-3 text-right font-bold text-zinc-900 dark:text-white">
+                    {jantasData.length > 0 && jantasData.some(j => j.valor > 0) 
+                      ? `R$ ${(jantasData.reduce((acc, j) => acc + j.valor, 0) / jantasData.filter(j => j.valor > 0).length).toFixed(2).replace('.', ',')}`
+                      : '-'}
+                  </td>
+                  <td className="pt-3 text-right font-bold text-green-600">
+                    {jantasData.length > 0 && jantasData.some(j => j.rateio > 0)
+                      ? `R$ ${(jantasData.reduce((acc, j) => acc + j.rateio, 0) / jantasData.filter(j => j.rateio > 0).length).toFixed(2).replace('.', ',')}`
+                      : '-'}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </Card>
+      )}
 
       <PdfPeriodoModal
         isOpen={isPdfModalOpen}
