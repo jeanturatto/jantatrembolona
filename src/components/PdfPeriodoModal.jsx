@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Modal } from './Modal';
-import { FileDown, Users, DollarShare, MessageCircle } from 'lucide-react';
+import { FileDown, Users, DollarSign, MessageCircle } from 'lucide-react';
 
 const MONTHS = [
   'Janeiro','Fevereiro','Março','Abril','Maio','Junho',
