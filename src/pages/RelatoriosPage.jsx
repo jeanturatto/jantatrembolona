@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Card } from '../components/Card';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { ShieldAlert, FileDown, DollarSign, Users, MessageCircle } from 'lucide-react';
+import { ShieldAlert, FileDown, DollarSign, Users } from 'lucide-react';
 import { PdfPeriodoModal } from '../components/PdfPeriodoModal';
 import { AdminUserModal } from '../components/AdminUserModal';
 
@@ -392,27 +392,6 @@ export default function RelatoriosPage() {
           >
             <FileDown size={16} /> Exportar PDF
           </button>
-          {!(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) && (
-            <button
-              onClick={() => {
-                const monthNames = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-                const title = `Relatório − ${monthNames[selectedMonth]} ${selectedYear} - PRESENÇAS`;
-                
-                let text = `🍽️ *${title}*\n\n`;
-                membersData.forEach(m => {
-                  text += `👤 ${m.name}: ✅${m.presentes} | 🟡${m.justificadas} | ❌${m.ausentes} (${m.perc}%)\n`;
-                });
-                text += `\n📊 ${totalJantas} jantas | ${membersData.length} membros\n\n`;
-                text += `🍽️ Janta Trembolona`;
-                
-                const encodedText = encodeURIComponent(text);
-                window.open(`https://wa.me/?text=${encodedText}`, '_blank');
-              }}
-              className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-xl font-bold text-sm transition-opacity shrink-0"
-            >
-              <MessageCircle size={16} /> WhatsApp
-            </button>
-          )}
         </div>
       </header>
 
