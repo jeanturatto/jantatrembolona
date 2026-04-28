@@ -387,29 +387,32 @@ export default function RelatoriosPage() {
         </div>
         <div className="flex gap-2">
           <button
-            onClick={() => setIsPdfModalOpen(true)}
+            onClick={() => {
+              const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (navigator.share !== undefined);
+              
+              if (isMobile && navigator.share) {
+                // Use native share on mobile
+                const monthNames = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+                const title = `Relatório − ${monthNames[selectedMonth]} ${selectedYear} - PRESENÇAS`;
+                
+                let text = `🍽️ *${title}*\n\n`;
+                membersData.forEach(m => {
+                  text += `👤 ${m.name}: ✅${m.presentes} | 🟡${m.justificadas} | ❌${m.ausentes} (${m.perc}%)\n`;
+                });
+                text += `\n📊 ${totalJantas} jantas | ${membersData.length} membros\n\n`;
+                text += `🍽️ Janta Trembolona`;
+                
+                navigator.share({
+                  title: title,
+                  text: text,
+                }).catch(() => {});
+              } else {
+                setIsPdfModalOpen(true);
+              }
+            }}
             className="flex items-center gap-2 px-4 py-2 bg-zinc-900 dark:bg-white text-white dark:text-black rounded-xl font-bold text-sm hover:opacity-90 transition-opacity shrink-0"
           >
-            <FileDown size={16} /> PDF
-          </button>
-          <button
-            onClick={() => {
-              const monthNames = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-              const title = `Relatório − ${monthNames[selectedMonth]} ${selectedYear}`;
-              
-              // Build WhatsApp text for presenças (most common)
-              let text = `🍽️ *${title} - PRESENÇAS*\n\n`;
-              membersData.forEach(m => {
-                text += `👤 ${m.name}: ✅${m.presentes} | 🟡${m.justificadas} | ❌${m.ausentes} (${m.perc}%)\n`;
-              });
-              text += `\n📊 ${totalJantas} jantas | ${membersData.length} membros`;
-              
-              const encodedText = encodeURIComponent(text);
-              window.open(`https://wa.me/?text=${encodedText}`, '_blank');
-            }}
-            className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-xl font-bold text-sm transition-opacity shrink-0"
-          >
-            <MessageCircle size={16} /> WhatsApp
+            <FileDown size={16} /> Compartilhar
           </button>
         </div>
       </header>
