@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Modal } from './Modal';
-import { FileDown, Users, DollarSign } from 'lucide-react';
+import { FileDown, Users, DollarShare, MessageCircle } from 'lucide-react';
 
 const MONTHS = [
   'Janeiro','Fevereiro','Março','Abril','Maio','Junho',
@@ -8,9 +8,9 @@ const MONTHS = [
 ];
 
 /**
- * Modal for choosing PDF export period
+ * Modal for choosing PDF export period and share method
  * Props: isOpen, onClose, onConfirm(params)
- * params: { type: 'month'|'year'|'range', year, month, startDate, endDate, reportType }
+ * params: { type: 'month'|'year'|'range', year, month, startDate, endDate, reportType, shareMethod }
  */
 export const PdfPeriodoModal = ({ isOpen, onClose, onConfirm }) => {
   const now = new Date();
@@ -20,6 +20,7 @@ export const PdfPeriodoModal = ({ isOpen, onClose, onConfirm }) => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [reportType, setReportType] = useState('presencas');
+  const [shareMethod, setShareMethod] = useState('pdf');
 
   const years = [now.getFullYear() - 1, now.getFullYear()];
 
@@ -27,7 +28,7 @@ export const PdfPeriodoModal = ({ isOpen, onClose, onConfirm }) => {
     if (type === 'range' && (!startDate || !endDate)) {
       alert('Preencha as duas datas.'); return;
     }
-    onConfirm({ type, year, month, startDate, endDate, reportType });
+    onConfirm({ type, year, month, startDate, endDate, reportType, shareMethod });
     onClose();
   };
 
@@ -36,8 +37,27 @@ export const PdfPeriodoModal = ({ isOpen, onClose, onConfirm }) => {
   const btnInactive = 'border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:border-zinc-400';
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Exportar Relatório PDF">
+    <Modal isOpen={isOpen} onClose={onClose} title="Exportar Relatório">
       <div className="space-y-5">
+        {/* Share Method selector */}
+        <div className="space-y-2">
+          <label className="text-[10px] font-bold uppercase text-zinc-400">Como compartilhar</label>
+          <div className="flex gap-2">
+            <button 
+              onClick={() => setShareMethod('pdf')} 
+              className={`flex-1 flex items-center justify-center gap-2 ${btnBase} ${shareMethod === 'pdf' ? btnActive : btnInactive}`}
+            >
+              <FileDown size={14} /> PDF
+            </button>
+            <button 
+              onClick={() => setShareMethod('whatsapp')} 
+              className={`flex-1 flex items-center justify-center gap-2 ${btnBase} ${shareMethod === 'whatsapp' ? btnActive : btnInactive}`}
+            >
+              <MessageCircle size={14} /> WhatsApp
+            </button>
+          </div>
+        </div>
+
         {/* Report Type selector */}
         <div className="space-y-2">
           <label className="text-[10px] font-bold uppercase text-zinc-400">Tipo de Relatório</label>
@@ -52,7 +72,7 @@ export const PdfPeriodoModal = ({ isOpen, onClose, onConfirm }) => {
               onClick={() => setReportType('valores')} 
               className={`flex-1 flex items-center justify-center gap-2 ${btnBase} ${reportType === 'valores' ? btnActive : btnInactive}`}
             >
-              <DollarSign size={14} /> Valores
+              <DollarShare size={14} /> Valores
             </button>
           </div>
         </div>

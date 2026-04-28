@@ -133,7 +133,7 @@ export default function RelatoriosPage() {
     if (profile?.id) fetchReports();
   }, [profile?.id, isAdmin, selectedMonth, selectedYear]);
 
-  const handlePdfConfirm = async ({ type, year, month, startDate, endDate, reportType = 'presencas' }) => {
+  const handlePdfConfirm = async ({ type, year, month, startDate, endDate, reportType = 'presencas', shareMethod = 'pdf' }) => {
     // Determine date range from selected type
     let start, end, title;
     if (type === 'month') {
@@ -201,7 +201,30 @@ export default function RelatoriosPage() {
             const rateio = (presentes + guests) > 0 ? Math.ceil(parseFloat(e.payment_value) / (presentes + guests)) : 0;
             return acc + rateio;
           }, 0) / eventosComValor)
-        : 0;
+: 0;
+
+      if (shareMethod === 'whatsapp') {
+        // Create WhatsApp text message
+        let text = `🍽️ *${title} - VALORES*\n\n`;
+        (events || []).forEach(e => {
+          const presentes = atts?.filter(a => a.event_id === e.id && a.status === 'Presente').length || 0;
+          const guests = Array.isArray(e.guests) ? e.guests.length : 0;
+          const totalPessoas = presentes + guests;
+          const valor = parseFloat(e.payment_value) || 0;
+          const rateio = totalPessoas > 0 ? Math.ceil(valor / totalPessoas) : 0;
+          const data = new Date(e.date).toLocaleDateString('pt-BR');
+          text += `📅 ${data} - ${e.name || 'Janta'}\n`;
+          text += `   👤 ${(e.responsibles || []).map(id => respNames[id] || 'Responsável').join(', ')}\n`;
+          text += `   👥 ${totalPessoas} pessoas\n`;
+          text += `   💰 R$ ${valor.toFixed(2).replace('.', ',')}\n`;
+          text += `   📊 Rateio: R$ ${rateio.toFixed(2).replace('.', ',')}\n\n`;
+        });
+        text += `📈 Média Rateio: R$ ${mediaRateio.toFixed(2).replace('.', ',')}\n`;
+        
+        const encodedText = encodeURIComponent(text);
+        window.open(`https://wa.me/?text=${encodedText}`, '_blank');
+        return;
+      }
 
       const win = window.open('', '_blank');
       if (!win) {
@@ -280,6 +303,26 @@ export default function RelatoriosPage() {
           <td style="text-align:right"><span class="badge ${statusColor}">${statusLabel}</span></td>
         </tr>`;
     }).join('');
+
+    if (shareMethod === 'whatsapp') {
+      // Create WhatsApp text message for presenças
+      let text = `🍽️ *${title} - PRESENÇAS*\n\n`;
+      profiles.forEach(p => {
+        const userAtts = atts.filter(a => a.user_id === p.id);
+        const presentes = userAtts.filter(a => a.status === 'Presente').length;
+        const justificadas = userAtts.filter(a => a.status === 'Falta Justificada').length;
+        const ausentes = userAtts.filter(a => a.status === 'Ausente').length;
+        const total = userAtts.length;
+        const perc = total > 0 ? Math.round((presentes / total) * 100) : 0;
+        const name = p.name || p.email?.split('@')[0] || 'Usuário';
+        text += `👤 ${name}: ✅${presentes} | 🟡${justificadas} | ❌${ausentes} (${perc}%)\n`;
+      });
+      text += `\n📊 ${totalJantasPdf} jantas | ${profiles.length} membros`;
+      
+      const encodedText = encodeURIComponent(text);
+      window.open(`https://wa.me/?text=${encodedText}`, '_blank');
+      return;
+    }
 
     const win = window.open('', '_blank');
     if (!win) {
